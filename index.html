@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Attendance Punch In / Punch Out Tracker</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+<style>
+body{font-family:Segoe UI,Tahoma,sans-serif;background:linear-gradient(#e3f2fd,#fff);margin:0;padding:20px}
+.container{max-width:900px;margin:auto;background:#fff;border-radius:12px;box-shadow:0 6px 12px rgba(0,0,0,.15);padding:20px}
+h2{text-align:center;color:#0d47a1}
+.row{display:grid;grid-template-columns:180px 1fr;gap:10px;margin-bottom:12px;align-items:center}
+input,select,button{height:36px;font-size:14px}
+button{background:#1976d2;color:#fff;border:none;border-radius:6px;cursor:pointer}
+button:hover{background:#1565c0}
+.table-wrap{overflow-x:auto;margin-top:20px}
+table{border-collapse:collapse;width:100%}
+th,td{border:1px solid #ccc;padding:8px;text-align:center}
+th{background:#e3f2fd}
+footer{text-align:center;margin-top:20px;color:#607d8b}
+.danger{background:#c62828}
+.danger:hover{background:#b71c1c}
+</style>
+</head>
+<body>
+<div class="container">
+<h2>Monthly Attendance Punch Tracker</h2>
+
+<div class="row">
+<label>Filter Month</label>
+<input type="month" id="monthFilter">
+</div>
+
+<div class="row">
+<label>Date</label>
+<input type="text" id="datePicker">
+</div>
+
+<div class="row">
+<label>Punch-In Time</label>
+<input type="time" id="punchIn">
+</div>
+
+<div class="row">
+<label>Punch-Out Time (optional)</label>
+<input type="time" id="punchOut" placeholder="Leave blank to auto-calculate">
+</div>
+
+<div class="row">
+<label>Required Daily Hours</label>
+<select id="dailyHours">
+<option value="8.5">8h 30m (Standard)</option>
+<option value="7.5">7h 30m</option>
+</select>
+</div>
+
+<button id="saveBtn" type="button">Save Punch</button>
+
+<div class="table-wrap">
+<table id="logTable">
+<thead>
+<tr>
+<th>Date</th>
+<th>Punch In</th>
+<th>Punch Out</th>
+<th>Edit</th>
+<th>Total Hours</th>
+<th>Action</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody></tbody>
+</table>
+</div>
+
+<button style="margin-top:15px" id="exportBtn" type="button">Download Monthly Report (CSV)</button>
+<button class="danger" style="margin-top:10px" id="deleteMonthBtn" type="button">Delete Selected Month</button>
+
+<footer>© <span id="yr"></span> Attendance Tracker</footer>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script>
+/* ================= INITIAL SETUP ================= */
+document.getElementById('yr').textContent = new Date().getFullYear();
+flatpickr('#datePicker',{dateFormat:'Y-m-d',defaultDate:new Date()});
+
+const STORAGE_KEY = 'attendance_logs_v1';
+const PRESENCE_START = '09:00';
+const PRESENCE_END   = '17:30';
+
+/* ================= UTILITIES ================= */
+function toMinutes(t){
+  const [h,m] = t.split(':').map(Number);
+  return h*60 + m;
+}
+
+function loadData(){
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'); }
+  catch(e){ return []; }
+}
+
+function saveData(data){
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+}
+
+/* ================= CORE LOGIC ================= */
+function saveEntry(){
+  const date = datePicker.value;
+  const inTime = punchIn.value;
+  const manualOut = punchOut.value;
+  const hrs = parseFloat(dailyHours.value);
+
+  if(!date || !inTime){
+    alert('Enter date and punch-in');
+    return;
+  }
+
+  const inMin = toMinutes(inTime);
+  let outTime;
+
+  if(manualOut){
+    outTime = manualOut;
+  } else {
+    const outCalc = new Date(`${date}T${inTime}`);
+    outCalc.setMinutes(outCalc.getMinutes() + hrs*60);
+    outTime = outCalc.toTimeString().slice(0,5);
+  }
+
+  const outMin = toMinutes(outTime);
+  punchOut.value = '';
+
+  if(inMin > toMinutes(PRESENCE_END) || outMin < toMinutes(PRESENCE_START)){
+    alert('Invalid entry: Presence between 09:00 and 17:30 is mandatory.');
+    return;
+  }
+
+  if(inMin < toMinutes(PRESENCE_START) && outMin < toMinutes(PRESENCE_END)){
+    alert('Invalid entry: Early coming does not permit early leaving before 17:30.');
+    return;
+  }
+
+  let compliance = 'Compliant';
+  if(inMin > toMinutes(PRESENCE_START) || outMin < toMinutes(PRESENCE_END)){
+    compliance = 'Partial (Check)';
+  }
+
+  const totalHrs = Math.round(((outMin - inMin)/60)*100)/100;
+
+  const data = loadData().filter(r => r.date !== date);
+  data.push({date, inTime, outTime, total: totalHrs, compliance});
+  saveData(data);
+  render();
+}
+
+function loadForEdit(date){
+  const rec = loadData().find(r => r.date === date);
+  if(!rec) return;
+  datePicker.value = rec.date;
+  punchIn.value = rec.inTime;
+  punchOut.value = rec.outTime;
+  alert('Edit Punch-Out time and click Save Punch to update.');
+}
+
+function render(){
+  const tbody = document.querySelector('#logTable tbody');
+  tbody.innerHTML = '';
+  const filter = monthFilter.value;
+
+  loadData()
+    .filter(r => !filter || r.date.startsWith(filter))
+    .sort((a,b) => a.date.localeCompare(b.date))
+    .forEach(r => {
+      const tr = document.createElement('tr');
+      tr.innerHTML =
+        `<td>${r.date}</td>`+
+        `<td>${r.inTime}</td>`+
+        `<td>${r.outTime}</td>`+
+        `<td><button class="edit-btn" type="button" data-date="${r.date}">Edit</button></td>`+
+        `<td>${r.total}</td>`+
+        `<td><button class="delete-btn" type="button" data-date="${r.date}">Delete</button></td>`+
+        `<td>${r.compliance}</td>`;
+      tbody.appendChild(tr);
+    });
+}
+
+function deleteDay(date){
+  if(!confirm(`Delete entry for ${date}?`)) return;
+  const data = loadData().filter(r => r.date !== date);
+  saveData(data);
+  render();
+}
+
+function deleteMonth(){
+  const m = monthFilter.value;
+  if(!m){ alert('Select month'); return; }
+  if(!confirm(`Delete ALL entries for ${m}?`)) return;
+  const data = loadData().filter(r => !r.date.startsWith(m));
+  saveData(data);
+  render();
+}
+
+function exportMonthly(){
+  const filter = monthFilter.value;
+  const data = loadData().filter(r => !filter || r.date.startsWith(filter));
+  if(!data.length){ alert('No data'); return; }
+
+  let csv = 'Date,Punch In,Punch Out,Hours,Compliance\n';
+  data.forEach(r => {
+    csv += `${r.date},${r.inTime},${r.outTime},${r.total},${r.compliance}\n`;
+  });
+
+  const blob = new Blob([csv],{type:'text/csv'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'attendance_' + (filter || 'all') + '.csv';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(a.href);
+}
+
+/* ================= EVENTS ================= */
+const logTableEl = document.getElementById('logTable');
+saveBtn.addEventListener('click', saveEntry);
+exportBtn.addEventListener('click', exportMonthly);
+deleteMonthBtn.addEventListener('click', deleteMonth);
+monthFilter.addEventListener('change', render);
+
+logTableEl.querySelector('tbody').addEventListener('click', e => {
+  if(e.target.classList.contains('delete-btn')){
+    deleteDay(e.target.dataset.date);
+  }
+  if(e.target.classList.contains('edit-btn')){
+    loadForEdit(e.target.dataset.date);
+  }
+});
+
+render();
+</script>
+</body>
+</html>
