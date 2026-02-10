@@ -190,6 +190,10 @@ function saveEntry(){
 
  let nonReason='';
 
+ // Grace window detection (09:00–09:10)
+ const isGraceWindow = (inMin > PRESENCE_START && inMin <= PRESENCE_START + GRACE_MIN);
+ if(isGraceWindow){ flags.grace = true; }
+
  if(emp==='faculty' && inMin>630) nonReason='Faculty after 10:30';
 
  if(emp==='staff'){
@@ -203,7 +207,10 @@ function saveEntry(){
 
  if(inMin>PRESENCE_END || outMin<PRESENCE_START) nonReason='Core hours violated';
  if(inMin<PRESENCE_START && outMin<PRESENCE_END) nonReason='Early coming does not permit early leaving';
- if(worked<hrs) nonReason='Hours short';
+ // Do not apply hours-short rule for grace window (09:00–09:10)
+ if(!(flags.grace && isGraceWindow)){
+  if(worked<hrs) nonReason='Hours short';
+ }
 
  let status='Compliant';
 
