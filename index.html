@@ -155,7 +155,7 @@ function saveEntry(){
  if(!date){alert('Select date');return;}
  if(!isSpecial && !inT){alert('Enter punch-in');return;}
 
- let flags={grace:false,lateComp:false,earlyLeave:false,special:false,autoOut:false,targetOut:null,staffRelax:false};
+ let flags={grace:false,lateComp:false,earlyLeave:false,special:false,autoOut:false,targetOut:null,staffRelax:false,reject:false};
 
  if(isSpecial){
   const newData=[...loadData().filter(r=>r.date!==date),{date,emp,inTime:'-',outTime:'-',hours:0,flags:{special:true},status:'Special Leave'}];
@@ -216,6 +216,7 @@ function saveEntry(){
 
  if(nonReason){
   status='Non-Compliant: '+nonReason;
+  flags.reject = true;
  } else if(inMin>PRESENCE_START){
   const late=inMin-PRESENCE_START;
   if(late<=GRACE_MIN){flags.grace=true;status='Compliant (Grace)';}
@@ -243,9 +244,13 @@ function render(){
     r.flags.special?'status-special':'status-full';
 
    const flagText=Object.keys(r.flags)
-    .filter(k=>r.flags[k]&&k!=='targetOut')
-    .map(k=>k==='autoOut'?`Target Punch-Out: ${r.flags.targetOut}`:k)
-    .join(', ')||'-';
+    .filter(k=>r.flags[k] && k!=='targetOut')
+    .map(k=>{
+      if(k==='autoOut') return `Target Punch-Out: ${r.flags.targetOut}`;
+      if(k==='reject') return 'REJECT';
+      return k;
+    })
+    .join(', ') || '-';
 
    tr.innerHTML=
     `<td>${r.date}</td>`+
