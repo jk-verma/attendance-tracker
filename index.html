@@ -42,13 +42,9 @@ footer{text-align:center;margin-top:20px;color:#607d8b}
 </head>
 <body>
 
-<!-- =====================
-     MAIN ATTENDANCE UI
-     ===================== -->
 <div class="container">
 <h2>Monthly Attendance Punch Tracker</h2>
 
-<!-- Employee category selector -->
 <div class="row">
 <label>Employee Type</label>
 <select id="empType">
@@ -57,34 +53,28 @@ footer{text-align:center;margin-top:20px;color:#607d8b}
 </select>
 </div>
 
-<!-- Month filter for viewing data -->
 <div class="row">
 <label>Filter Month</label>
 <input type="month" id="monthFilter">
 </div>
 
-<!-- Dynamic monthly counters -->
 <div class="counter-box" id="counters"></div>
 
-<!-- Date input -->
 <div class="row">
 <label>Date</label>
 <input type="text" id="datePicker">
 </div>
 
-<!-- Punch-in time -->
 <div class="row">
 <label>Punch-In Time</label>
 <input type="time" id="punchIn">
 </div>
 
-<!-- Punch-out time (optional, auto-calculated if empty) -->
 <div class="row">
 <label>Punch-Out Time</label>
 <input type="time" id="punchOut">
 </div>
 
-<!-- Special leave marker -->
 <div class="row">
 <label>Special Leave (Accident / Death)</label>
 <select id="specialLeave">
@@ -93,7 +83,6 @@ footer{text-align:center;margin-top:20px;color:#607d8b}
 </select>
 </div>
 
-<!-- Required working hours selector -->
 <div class="row">
 <label>Required Daily Hours</label>
 <select id="dailyHours">
@@ -102,7 +91,6 @@ footer{text-align:center;margin-top:20px;color:#607d8b}
 </select>
 </div>
 
-<!-- Policy note -->
 <div class="note">
 Late coming, early leaving, or special leave will be automatically inferred.<br>
 <b>Staff relaxation rule:</b> Arrival between 09:30–10:00 is allowed only up to
@@ -112,7 +100,6 @@ subject to full-hour compensation.
 
 <button id="saveBtn" type="button">Save Punch</button>
 
-<!-- Attendance table -->
 <div class="table-wrap">
 <table id="logTable">
 <thead>
@@ -129,56 +116,67 @@ subject to full-hour compensation.
 <footer>© <span id="yr"></span> Attendance Tracker. All rights reserved.</footer>
 </div>
 
-<!-- =====================
-     QR CODE SYNC MODULE
-     ===================== -->
-<div class="container" style="margin-top:30px">
-<h2>Cross-Device Sync (QR Code)</h2>
-<div class="row"><button id="qrExportBtn">Export Data via QR</button></div>
-<div class="row"><button id="qrImportBtn">Import Data via QR</button></div>
-<div id="qrBox" style="margin-top:15px"></div>
-<div id="qrScanner" style="width:320px;margin-top:15px"></div>
-<div id="qrPreview" class="note"></div>
-</div>
-
-<!-- =====================
-     JS LIBRARIES
-     ===================== -->
 <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
-<script src="https://cdn.jsdelivr.net/npm/lz-string@1.4.4/libs/lz-string.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
-<script src="https://unpkg.com/html5-qrcode"></script>
 
 <script>
-/* ======================================================
-   CORE ATTENDANCE ENGINE (LocalStorage-based)
-   ====================================================== */
+/* ================= CORE LOGIC ================= */
 
-// Auto-update copyright year
-document.getElementById('yr').textContent=new Date().getFullYear();
-
-// Initialize date picker
+document.getElementById('yr').textContent = new Date().getFullYear();
 flatpickr('#datePicker',{dateFormat:'Y-m-d',defaultDate:new Date()});
 
-/* ---------- CONFIGURATION CONSTANTS ---------- */
-const STORAGE_KEY='attendance_logs_v8';          // LocalStorage key
-const PRESENCE_START=540;                        // 09:00 in minutes
-const PRESENCE_END=1050;                         // 17:30 in minutes
-const GRACE_MIN=10;                              // 10 min grace
-const STAFF_LATE_FREE_LIMIT=570;                 // 09:30
-const STAFF_RELAX_LIMIT=600;                     // 10:00
-const STAFF_RELAX_PERCENT=0.30;                  // 30% cap
+const STORAGE_KEY='attendance_logs_v8';
+const PRESENCE_START=540, PRESENCE_END=1050;
+const GRACE_MIN=10;
+const STAFF_LATE_FREE_LIMIT=570;
+const STAFF_RELAX_LIMIT=600;
+const STAFF_RELAX_PERCENT=0.30;
 
-/* ---------- HELPER FUNCTIONS ---------- */
 const toMinutes=t=>{const[a,b]=t.split(':').map(Number);return a*60+b};
 const loadData=()=>JSON.parse(localStorage.getItem(STORAGE_KEY)||'[]');
 const saveData=d=>localStorage.setItem(STORAGE_KEY,JSON.stringify(d));
 const getMonth=d=>d.slice(0,7);
 
-/* ======================================================
-   (Remaining JS logic unchanged — only comments added)
-   Attendance rules, validation, rendering, QR export/import
-   ====================================================== */
+function saveEntry(){
+ const date=datePicker.value;
+ const emp=empType.value;
+ const inT=punchIn.value;
+ let outT=punchOut.value;
+ if(!date||!inT){alert('Date and punch-in required');return;}
+
+ let flags={grace:false,lateComp:false,autoOut:false,targetOut:null,reject:false};
+ const hrs=parseFloat(dailyHours.value);
+ const inMin=toMinutes(inT);
+
+ if(!outT){
+  let outMin=Math.max(inMin+hrs*60,PRESENCE_END);
+  outT=`${String(Math.floor(outMin/60)).padStart(2,'0')}:${String(outMin%60).padStart(2,'0')}`;
+  flags.autoOut=true;
+  flags.targetOut=outT;
+ }
+
+ const outMin=toMinutes(outT);
+ const worked=(outMin-inMin)/60;
+ let status='Compliant';
+ if(worked<hrs){status='Non-Compliant: Hours short';flags.reject=true;}
+
+ const data=[...loadData().filter(r=>r.date!==date),{date,emp,inTime:inT,outTime:outT,hours:worked,flags,status}];
+ data.sort((a,b)=>a.date.localeCompare(b.date));
+ saveData(data);
+ render();
+}
+
+function render(){
+ const tb=document.querySelector('#logTable tbody');
+ tb.innerHTML='';
+ loadData().forEach(r=>{
+  const tr=document.createElement('tr');
+  tr.innerHTML=`<td>${r.date}</td><td>${r.emp}</td><td>${r.inTime}</td><td>${r.outTime}</td><td>${r.flags.reject?'REJECT':'-'}</td><td>${r.hours.toFixed(2)}</td><td>-</td><td>-</td><td>${r.status}</td>`;
+  tb.appendChild(tr);
+ });
+}
+
+saveBtn.onclick=saveEntry;
+render();
 </script>
 </body>
 </html>
