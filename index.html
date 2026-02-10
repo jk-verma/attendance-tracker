@@ -4,20 +4,15 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Attendance Punch In / Punch Out Tracker</title>
-
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
-
 <style>
 body{font-family:Segoe UI,Tahoma,sans-serif;background:linear-gradient(#e3f2fd,#fff);margin:0;padding:20px}
-.container{max-width:1150px;margin:auto;background:#fff;border-radius:12px;box-shadow:0 6px 12px rgba(0,0,0,.15);padding:20px;margin-bottom:30px}
+.container{max-width:1050px;margin:auto;background:#fff;border-radius:12px;box-shadow:0 6px 12px rgba(0,0,0,.15);padding:20px}
 h2{text-align:center;color:#0d47a1}
 .row{display:grid;grid-template-columns:260px 1fr;gap:10px;margin-bottom:12px;align-items:center}
 input,select,button{height:36px;font-size:14px}
 button{background:#1976d2;color:#fff;border:none;border-radius:6px;cursor:pointer}
 button:hover{background:#1565c0}
-.danger{background:#c62828}
-.danger:hover{background:#b71c1c}
-.note{font-size:0.9em;color:#455a64}
 .table-wrap{overflow-x:auto;margin-top:20px}
 table{border-collapse:collapse;width:100%}
 th,td{border:1px solid #ccc;padding:8px;text-align:center}
@@ -25,288 +20,299 @@ th{background:#e3f2fd}
 .status-full{background:#e8f5e9}
 .status-late{background:#fffde7}
 .status-auto{background:#ffeb3b;font-weight:600}
-.status-non{background:#ffebee}
 .status-special{background:#e3f2fd;font-style:italic}
+.status-non{background:#ffebee}
 footer{text-align:center;margin-top:20px;color:#607d8b}
-.modal{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:center;justify-content:center}
-.modal>div{background:#fff;padding:20px;border-radius:10px;width:420px}
+.danger{background:#c62828}
+.danger:hover{background:#b71c1c}
 .counter-box{background:#f1f8ff;padding:10px;border-radius:8px;margin-bottom:15px}
+.note{font-size:0.9em;color:#455a64}
 </style>
 </head>
 <body>
-
 <div class="container">
 <h2>Monthly Attendance Punch Tracker</h2>
 
-<div class="row"><label>Employee Type</label>
-<select id="empType"><option value="faculty">Faculty</option><option value="staff">Staff</option></select></div>
+<div class="row">
+<label>Employee Type</label>
+<select id="empType">
+<option value="faculty">Faculty</option>
+<option value="staff">Staff</option>
+</select>
+</div>
 
-<div class="row"><label>Filter Month</label><input type="month" id="monthFilter"></div>
+<div class="row">
+<label>Filter Month</label>
+<input type="month" id="monthFilter">
+</div>
+
 <div class="counter-box" id="counters"></div>
 
-<div class="row"><label>Date</label><input type="text" id="datePicker"></div>
-<div class="row"><label>Punch-In</label><input type="time" id="punchIn"></div>
-<div class="row"><label>Punch-Out</label><input type="time" id="punchOut"></div>
-<div class="row"><label>Special Leave (Accident / Death)</label><select id="specialLeave"><option value="no">No</option><option value="yes">Yes</option></select></div>
-<div class="row"><label>Required Daily Hours</label><select id="dailyHours"><option value="8.5">8h 30m (Standard)</option><option value="7.5">7h 30m</option></select></div>
+<div class="row">
+<label>Date</label>
+<input type="text" id="datePicker">
+</div>
+
+<div class="row">
+<label>Punch-In Time</label>
+<input type="time" id="punchIn">
+</div>
+
+<div class="row">
+<label>Punch-Out Time</label>
+<input type="time" id="punchOut">
+</div>
+
+<div class="row">
+<label>Special Leave (Accident / Death)</label>
+<select id="specialLeave">
+<option value="no">No</option>
+<option value="yes">Yes</option>
+</select>
+</div>
+
+<div class="row">
+<label>Required Daily Hours</label>
+<select id="dailyHours">
+<option value="8.5">8h 30m (Standard)</option>
+<option value="7.5">7h 30m</option>
+</select>
+</div>
+
 <div class="note">Late coming, early leaving, or special leave will be automatically inferred.<br><b>Staff relaxation rule:</b> Arrival between 09:30–10:00 is allowed only up to <b>30% of total working days</b> in the month (excluding special leave days), subject to full-hour compensation.</div>
 
-<button id="saveBtn">Save Punch</button>
+<button id="saveBtn" type="button">Save Punch</button>
 
 <div class="table-wrap">
-<table id="logTable"><thead><tr>
-<th>Date</th><th>Emp</th><th>In</th><th>Out</th><th>Flags</th><th>Hours</th><th>Edit</th><th>Delete</th><th>Status</th>
-</tr></thead><tbody></tbody></table>
-</div>
-</div>
-
-<div class="container">
-<h2>Cross Device Sync (QR Code)</h2>
-<div class="row"><button id="qrExportMonthBtn">Export Selected Month via QR</button></div>
-<div class="row"><button id="qrExportAllBtn">Export All via QR</button></div>
-<div class="row"><button id="qrImportBtn">Import via QR</button></div>
-<div id="qrBox" style="margin-top:15px"></div>
-<div id="qrScanner" style="width:320px;margin-top:15px"></div>
-<div id="qrMsg" class="note"></div>
+<table id="logTable">
+<thead>
+<tr>
+<th>Date</th><th>Emp</th><th>In</th><th>Out</th><th>Flags</th><th>Hours</th><th>Edit</th><th>Action</th><th>Status</th>
+</tr>
+</thead>
+<tbody></tbody>
+</table>
 </div>
 
-<div class="modal" id="mergeModal"><div>
-<h3>Merge Conflict</h3>
-<div id="mergeBody"></div>
-<button id="mergeKeep">Keep Local</button>
-<button id="mergeReplace">Replace with QR</button>
-</div></div>
-
+<button id="exportBtn">Download Monthly Report (CSV)</button>
+<button id="deleteMonthBtn" class="danger">Delete Selected Month</button>
 <footer>© <span id="yr"></span> Attendance Tracker. All rights reserved.</footer>
+</div>
 
 <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
-<script src="https://cdn.jsdelivr.net/npm/lz-string@1.4.4/libs/lz-string.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
-<script src="https://unpkg.com/html5-qrcode"></script>
-
 <script>
-/* ================= INITIAL SETUP ================= */
-document.getElementById('yr').textContent = new Date().getFullYear();
+// ===== Setup =====
+document.getElementById('yr').textContent=new Date().getFullYear();
 flatpickr('#datePicker',{dateFormat:'Y-m-d',defaultDate:new Date()});
 
-/* ================= CONFIG ================= */
-const STORAGE_KEY = 'attendance_logs_v12';
-const PRESENCE_START = 540; // 09:00
-const PRESENCE_END   = 1050; // 17:30
-const GRACE_MIN = 10;
-const STAFF_LATE_FREE_LIMIT = 570; // 09:30
-const STAFF_RELAX_LIMIT = 600; // 10:00
-const STAFF_RELAX_PERCENT = 0.30;
+const STORAGE_KEY='attendance_logs_v8';
+const PRESENCE_START=540, PRESENCE_END=1050;
+const GRACE_MIN=10;
+const STAFF_LATE_FREE_LIMIT=570; // 09:30
+const STAFF_RELAX_LIMIT=600;     // 10:00
+const STAFF_RELAX_PERCENT=0.30;
 
-const toMinutes = t => { const [h,m] = t.split(':').map(Number); return h*60 + m; };
-const loadData  = () => JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
-const saveData  = d => localStorage.setItem(STORAGE_KEY, JSON.stringify(d));
-const getMonth  = d => d.slice(0,7);
+const toMinutes=t=>{const[a,b]=t.split(':').map(Number);return a*60+b};
+const loadData=()=>JSON.parse(localStorage.getItem(STORAGE_KEY)||'[]');
+const saveData=d=>localStorage.setItem(STORAGE_KEY,JSON.stringify(d));
+const getMonth=d=>d.slice(0,7);
 
-let editDate = null;
-
-/* ================= LOCK PAST MONTH ================= */
-function isPastMonth(date){
- const d = new Date(date);
- const now = new Date();
- return d.getFullYear() < now.getFullYear() ||
-        (d.getFullYear() === now.getFullYear() && d.getMonth() < now.getMonth());
-}
-
-/* ================= MONTHLY COUNTERS ================= */
 function getCounters(month){
- const rows = loadData().filter(r => getMonth(r.date) === month);
- const staff = rows.filter(r => r.emp === 'staff' && !r.flags.special);
- return {
-  grace: rows.filter(r => r.flags.grace).length,
-  lateComp: rows.filter(r => r.flags.lateComp).length,
-  nonComp: rows.filter(r => r.flags.reject).length,
-  special: rows.filter(r => r.flags.special).length,
-  staffRelaxUsed: staff.filter(r => r.flags.staffRelax).length,
-  staffRelaxAllowed: Math.floor(staff.length * STAFF_RELAX_PERCENT)
+ const rows=loadData().filter(r=>getMonth(r.date)===month);
+ const staff=rows.filter(r=>r.emp==='staff');
+ return{
+  grace:rows.filter(r=>r.flags.grace).length,
+  lateComp:rows.filter(r=>r.flags.lateComp).length,
+  nonComp:rows.filter(r=>r.status.startsWith('Non')).length,
+  special:rows.filter(r=>r.flags.special).length,
+  staffRelaxUsed:staff.filter(r=>r.flags.staffRelax).length,
+  staffRelaxAllowed: Math.floor(staff.filter(r=>!r.flags.special).length * STAFF_RELAX_PERCENT)
  };
 }
 
 function renderCounters(){
- const m = monthFilter.value;
- if(!m){ counters.innerHTML=''; return; }
- const c = getCounters(m);
- counters.innerHTML = `<b>${m}</b><br>
-  Grace: ${c.grace}<br>
-  Late Comp: ${c.lateComp}<br>
-  Non-Compliant: ${c.nonComp}<br>
-  Special: ${c.special}<br>
-  Staff Relax: ${c.staffRelaxUsed}/${c.staffRelaxAllowed}`;
+ const m=monthFilter.value;
+ if(!m){counters.innerHTML='';return;}
+ const c=getCounters(m);
+ counters.innerHTML=
+  `<b>${m}</b><br>`+
+  `Grace: ${c.grace}<br>`+
+  `Late Comp: ${c.lateComp}<br>`+
+  `Non-Compliant: ${c.nonComp}<br>`+
+  `Special: ${c.special}<br>`+
+  `Staff Relax: ${c.staffRelaxUsed}/${c.staffRelaxAllowed}`;
 }
 
-/* ================= SAVE ENTRY ================= */
+let editingDate=null;
+
 function saveEntry(){
- const date = datePicker.value;
- const emp  = empType.value;
- const inT  = punchIn.value;
- let outT   = punchOut.value;
- const isSpecial = specialLeave.value === 'yes';
+ const date=datePicker.value;
+ const emp=empType.value;
+ const inT=punchIn.value;
+ let outT=punchOut.value;
+ const isSpecial=specialLeave.value==='yes';
 
- if(!date){ alert('Select date'); return; }
- if(!isSpecial && !inT){ alert('Enter punch-in'); return; }
- if(isPastMonth(date)){ alert('Past months are locked'); return; }
+ if(!date){alert('Select date');return;}
+ if(!isSpecial && !inT){alert('Enter punch-in');return;}
 
- let flags = {grace:false, lateComp:false, staffRelax:false, special:false, autoOut:false, targetOut:null, reject:false};
+ let flags={grace:false,lateComp:false,earlyLeave:false,special:false,autoOut:false,targetOut:null,staffRelax:false,reject:false};
 
  if(isSpecial){
-  flags.special = true;
-  const data = loadData().filter(r => r.date !== date);
-  data.push({date, emp, inTime:'-', outTime:'-', hours:0, flags, status:'Special Leave'});
-  data.sort((a,b)=>a.date.localeCompare(b.date));
-  saveData(data); render(); return;
+  const newData=[...loadData().filter(r=>r.date!==date),{date,emp,inTime:'-',outTime:'-',hours:0,flags:{special:true},status:'Special Leave'}];
+  newData.sort((a,b)=>a.date.localeCompare(b.date));
+  saveData(newData);
+  render();
+  return;
  }
 
- const hrs = parseFloat(dailyHours.value);
- const inMin = toMinutes(inT);
+ const hrs=parseFloat(dailyHours.value);
 
  if(!outT){
-  if(inMin > PRESENCE_START && inMin <= PRESENCE_START + GRACE_MIN){
+  const inMinTmp = toMinutes(inT);
+  let finalOutMin;
+
+  // Grace case: 09:00–09:10 → punch-out allowed at 17:30
+  if(inMinTmp > PRESENCE_START && inMinTmp <= PRESENCE_START + GRACE_MIN){
+    finalOutMin = PRESENCE_END;
     flags.grace = true;
-    outT = '17:30';
   } else {
-    const outMin = Math.max(inMin + hrs*60, PRESENCE_END);
-    outT = `${String(Math.floor(outMin/60)%24).padStart(2,'0')}:${String(outMin%60).padStart(2,'0')}`;
-    flags.autoOut = true;
-    flags.targetOut = outT;
+    finalOutMin = Math.max(inMinTmp + hrs*60, PRESENCE_END);
+  }
+
+  outT = `${String(Math.floor(finalOutMin/60)%24).padStart(2,'0')}:${String(finalOutMin%60).padStart(2,'0')}`;
+  flags.autoOut = true;
+  flags.targetOut = outT;
+ }
+
+ const inMin=toMinutes(inT);
+ const outMin=toMinutes(outT);
+ const worked=(outMin-inMin)/60;
+
+ let nonReason='';
+
+ // Grace window detection (09:00–09:10)
+ const isGraceWindow = (inMin > PRESENCE_START && inMin <= PRESENCE_START + GRACE_MIN);
+ if(isGraceWindow){ flags.grace = true; }
+
+ if(emp==='faculty' && inMin>630) nonReason='Faculty after 10:30';
+
+ if(emp==='staff'){
+  const c=getCounters(getMonth(date));
+  if(inMin>STAFF_RELAX_LIMIT) nonReason='Staff after 10:00';
+  else if(inMin>STAFF_LATE_FREE_LIMIT){
+   if(c.staffRelaxUsed>=c.staffRelaxAllowed) nonReason='Staff relaxation exceeded';
+   else flags.staffRelax=true;
   }
  }
 
- const outMin = toMinutes(outT);
- const worked = (outMin - inMin) / 60;
- let nonReason = '';
-
- if(emp === 'faculty' && inMin > 630) nonReason = 'Faculty after 10:30';
-
- if(emp === 'staff'){
-  const staffRows = loadData().filter(r => r.emp==='staff' && getMonth(r.date)===getMonth(date) && !r.flags.special);
-  const relaxAllowed = Math.floor(staffRows.length * STAFF_RELAX_PERCENT);
-  const relaxUsed = staffRows.filter(r => r.flags.staffRelax).length;
-  if(inMin > STAFF_RELAX_LIMIT) nonReason = 'Staff after 10:00';
-  else if(inMin > STAFF_LATE_FREE_LIMIT){
-    if(relaxUsed >= relaxAllowed) nonReason = 'Staff relaxation exceeded';
-    else flags.staffRelax = true;
-  }
+ if(inMin>PRESENCE_END || outMin<PRESENCE_START) nonReason='Core hours violated';
+ if(inMin<PRESENCE_START && outMin<PRESENCE_END) nonReason='Early coming does not permit early leaving';
+ // Do not apply hours-short rule for grace window (09:00–09:10)
+ if(!(flags.grace && isGraceWindow)){
+  if(worked<hrs) nonReason='Hours short';
  }
 
- if(!flags.grace && worked < hrs) nonReason = 'Hours short';
+ let status='Compliant';
 
- let status = 'Compliant';
- if(nonReason){ status = 'Non-Compliant: ' + nonReason; flags.reject = true; }
- else if(inMin > PRESENCE_START && !flags.grace){ flags.lateComp = true; status = 'Compliant (Late Compensated)'; }
+ if(nonReason){
+  status='Non-Compliant: '+nonReason;
+  flags.reject = true;
+ } else if(inMin>PRESENCE_START){
+  const late=inMin-PRESENCE_START;
+  if(late<=GRACE_MIN){flags.grace=true;status='Compliant (Grace)';}
+  else{flags.lateComp=true;status='Compliant (Late Compensated)';}
+ }
 
- const data = loadData().filter(r => r.date !== (editDate || date));
- data.push({date, emp, inTime:inT, outTime:outT, hours:Math.round(worked*100)/100, flags, status});
- data.sort((a,b)=>a.date.localeCompare(b.date));
- saveData(data); editDate=null; render();
+ const newData=[...loadData().filter(r=>r.date!==date),{date,emp,inTime:inT,outTime:outT,hours:Math.round(worked*100)/100,flags,status}];
+ newData.sort((a,b)=>a.date.localeCompare(b.date));
+ saveData(newData);
+ render();
 }
 
-/* ================= RENDER ================= */
 function render(){
- const tb = document.querySelector('#logTable tbody');
- tb.innerHTML = '';
+ const tb=document.querySelector('#logTable tbody');
+ tb.innerHTML='';
  loadData()
   .sort((a,b)=>a.date.localeCompare(b.date))
-  .filter(r => !monthFilter.value || getMonth(r.date) === monthFilter.value)
-  .forEach(r => {
-   const tr = document.createElement('tr');
-   tr.className = r.flags.autoOut ? 'status-auto' :
-                  r.flags.reject ? 'status-non' :
-                  r.flags.special ? 'status-special' :
-                  r.flags.lateComp ? 'status-late' : 'status-full';
+  .filter(r=>!monthFilter.value||getMonth(r.date)===monthFilter.value)
+  .forEach(r=>{
+   const tr=document.createElement('tr');
+   tr.className=
+    r.flags.autoOut?'status-auto':
+    r.status.startsWith('Non')?'status-non':
+    r.status.includes('Late')?'status-late':
+    r.flags.special?'status-special':'status-full';
 
-   const flagText = Object.keys(r.flags)
-    .filter(k => r.flags[k] && k !== 'targetOut')
-    .map(k => k === 'autoOut' ? `Target Punch-Out: ${r.flags.targetOut}` : k.toUpperCase())
+   const flagText=Object.keys(r.flags)
+    .filter(k=>r.flags[k] && k!=='targetOut')
+    .map(k=>{
+      if(k==='autoOut') return `Target Punch-Out: ${r.flags.targetOut}`;
+      if(k==='reject') return 'REJECT';
+      return k;
+    })
     .join(', ') || '-';
 
-   tr.innerHTML = `<td>${r.date}</td><td>${r.emp}</td><td>${r.inTime}</td><td>${r.outTime}</td>
-    <td>${flagText}</td><td>${r.hours.toFixed(2)}</td>
-    <td><button onclick="editRow('${r.date}')">Edit</button></td>
-    <td><button onclick="deleteRow('${r.date}')">Delete</button></td>
-    <td>${r.status}</td>`;
+   tr.innerHTML=
+    `<td>${r.date}</td>`+
+    `<td>${r.emp}</td>`+
+    `<td>${r.inTime}</td>`+
+    `<td>${r.outTime}</td>`+
+    `<td>${flagText}</td>`+
+    `<td>${r.hours}</td>`+
+    `<td><button onclick=\"loadForEdit('${r.date}')\">Edit</button></td>`+
+    `<td><button onclick=\"deleteDay('${r.date}')\">Delete</button></td>`+
+    `<td>${r.status}</td>`;
+
    tb.appendChild(tr);
   });
  renderCounters();
 }
 
-function editRow(d){
- const r = loadData().find(x => x.date === d);
+function loadForEdit(d){
+ const r=loadData().find(x=>x.date===d);
  if(!r) return;
- editDate = d;
- datePicker.value = r.date;
- empType.value = r.emp;
- punchIn.value = r.inTime === '-' ? '' : r.inTime;
- punchOut.value = r.outTime === '-' ? '' : r.outTime;
+ editingDate=d;
+ datePicker.value=r.date;
+ empType.value=r.emp;
+ punchIn.value=r.inTime==='-'?'':r.inTime;
+ punchOut.value=r.outTime==='-'?'':r.outTime;
 }
 
-function deleteRow(d){
+function deleteDay(d){
  if(confirm('Delete '+d)){
-  saveData(loadData().filter(r => r.date !== d));
+  const newData=loadData().filter(r=>r.date!==d);
+  saveData(newData);
   render();
  }
 }
 
-saveBtn.onclick = saveEntry;
-monthFilter.onchange = render;
-render();
-
-/* ================= QR EXPORT ================= */
-function exportQR(records){
- const payload = {app:'attendance-tracker', strategy:'merge-by-date', records};
- const txt = LZString.compressToBase64(JSON.stringify(payload));
- qrBox.innerHTML = '';
- new QRCode(qrBox,{text:txt,width:280,height:280});
- qrMsg.textContent = `QR generated (${records.length} records)`;
+function deleteMonth(){
+ const m=monthFilter.value;
+ if(m && confirm('Delete '+m)){
+  const newData=loadData().filter(r=>getMonth(r.date)!==m);
+  saveData(newData);
+  render();
+ }
 }
 
-qrExportAllBtn.onclick = () => exportQR(loadData());
-qrExportMonthBtn.onclick = () => {
- const m = monthFilter.value;
- if(!m){ alert('Select month'); return; }
- exportQR(loadData().filter(r => getMonth(r.date) === m));
-};
-
-/* ================= QR IMPORT WITH MERGE UI ================= */
-let scanner, qrQueue = [], qrIndex = 0;
-qrImportBtn.onclick = () => {
- scanner = new Html5Qrcode('qrScanner');
- scanner.start({facingMode:'environment'},{fps:10,qrbox:250},txt => {
-  scanner.stop(); qrScanner.innerHTML = '';
-  const data = JSON.parse(LZString.decompressFromBase64(txt));
-  if(data.app !== 'attendance-tracker'){ alert('Invalid QR'); return; }
-
-  const local = loadData();
-  qrQueue = data.records.filter(r => local.find(x => x.date === r.date));
-  const fresh = data.records.filter(r => !local.find(x => x.date === r.date));
-  fresh.forEach(r => local.push(r));
-  saveData(local); render();
-  if(qrQueue.length){ qrIndex = 0; showMerge(); }
-  else qrMsg.textContent = 'Import complete';
+function exportMonthly(){
+ const rows=loadData();
+ let csv='Date,Emp,In,Out,Flags,Hours,Status\n';
+ rows.forEach(r=>{
+  const f=Object.keys(r.flags).filter(k=>r.flags[k]).join('|');
+  csv+=`${r.date},${r.emp},${r.inTime},${r.outTime},"${f}",${r.hours},${r.status}\n`;
  });
-};
-
-function showMerge(){
- const local = loadData();
- const inc = qrQueue[qrIndex];
- const loc = local.find(r => r.date === inc.date);
- mergeBody.innerHTML = `<b>Date:</b> ${inc.date}<br>Local: ${loc.inTime}-${loc.outTime}<br>QR: ${inc.inTime}-${inc.outTime}`;
- mergeModal.style.display = 'flex';
- mergeKeep.onclick = () => { qrIndex++; mergeModal.style.display='none'; nextMerge(); };
- mergeReplace.onclick = () => {
-  const idx = local.findIndex(r => r.date === inc.date);
-  local[idx] = inc; saveData(local); qrIndex++; mergeModal.style.display='none'; nextMerge();
- };
+ const a=document.createElement('a');
+ a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));
+ a.download='attendance.csv';
+ a.click();
 }
 
-function nextMerge(){
- if(qrIndex < qrQueue.length) showMerge();
- else { render(); qrMsg.textContent = 'Merge completed'; }
-}
+saveBtn.onclick=saveEntry;
+exportBtn.onclick=exportMonthly;
+deleteMonthBtn.onclick=deleteMonth;
+monthFilter.onchange=render;
+render();
 </script>
 </body>
 </html>
