@@ -79,7 +79,7 @@ footer{text-align:center;margin-top:20px;color:#607d8b}
 </select>
 </div>
 
-<div class="note">Late coming, early leaving, or special leave will be automatically inferred.</div>
+<div class="note">Late coming, early leaving, or special leave will be automatically inferred.<br><b>Staff relaxation rule:</b> Arrival between 09:30–10:00 is allowed only up to <b>30% of total working days</b> in the month (excluding special leave days), subject to full-hour compensation.</div>
 
 <button id="saveBtn" type="button">Save Punch</button>
 
@@ -126,7 +126,7 @@ function getCounters(month){
   nonComp:rows.filter(r=>r.status.startsWith('Non')).length,
   special:rows.filter(r=>r.flags.special).length,
   staffRelaxUsed:staff.filter(r=>r.flags.staffRelax).length,
-  staffRelaxAllowed:Math.ceil(staff.length*STAFF_RELAX_PERCENT)
+  staffRelaxAllowed: Math.floor(staff.filter(r=>!r.flags.special).length * STAFF_RELAX_PERCENT)
  };
 }
 
