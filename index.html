@@ -168,10 +168,20 @@ function saveEntry(){
  const hrs=parseFloat(dailyHours.value);
 
  if(!outT){
-  const m=Math.max(toMinutes(inT)+hrs*60,PRESENCE_END);
-  outT=`${String(Math.floor(m/60)%24).padStart(2,'0')}:${String(m%60).padStart(2,'0')}`;
-  flags.autoOut=true;
-  flags.targetOut=outT;
+  const inMinTmp = toMinutes(inT);
+  let finalOutMin;
+
+  // Grace case: 09:00–09:10 → punch-out allowed at 17:30
+  if(inMinTmp > PRESENCE_START && inMinTmp <= PRESENCE_START + GRACE_MIN){
+    finalOutMin = PRESENCE_END;
+    flags.grace = true;
+  } else {
+    finalOutMin = Math.max(inMinTmp + hrs*60, PRESENCE_END);
+  }
+
+  outT = `${String(Math.floor(finalOutMin/60)%24).padStart(2,'0')}:${String(finalOutMin%60).padStart(2,'0')}`;
+  flags.autoOut = true;
+  flags.targetOut = outT;
  }
 
  const inMin=toMinutes(inT);
