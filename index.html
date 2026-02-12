@@ -43,7 +43,7 @@ footer{text-align:center;margin-top:20px;color:#607d8b}
 
 <div class="row">
 <label>Filter Month</label>
-<input type="month" id="monthFilter">
+<input type="text" id="monthFilter" placeholder="Select Month">
 </div>
 
 <div class="counter-box" id="counters"></div>
@@ -55,12 +55,12 @@ footer{text-align:center;margin-top:20px;color:#607d8b}
 
 <div class="row">
 <label>Punch-In Time</label>
-<input type="time" id="punchIn">
+<input type="text" id="punchIn">
 </div>
 
 <div class="row">
 <label>Punch-Out Time</label>
-<input type="time" id="punchOut">
+<input type="text" id="punchOut">
 </div>
 
 <div class="row">
@@ -101,25 +101,29 @@ footer{text-align:center;margin-top:20px;color:#607d8b}
 
 <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 <script>
-// ===== Setup =====
-document.getElementById('yr').textContent=new Date().getFullYear();
+// ===== Uniform Cross-Browser Pickers =====
+document.getElementById('yr').textContent = new Date().getFullYear();
+
 flatpickr('#datePicker',{dateFormat:'Y-m-d',defaultDate:new Date()});
 
-// Enable proper Month-Year picker for Filter Month
 flatpickr('#monthFilter',{
-  dateFormat: 'Y-m',
-  plugins: [new monthSelectPlugin({
-    shorthand: true,
-    dateFormat: 'Y-m',
-    altFormat: 'F Y'
-  })]
+  dateFormat:'Y-m',
+  plugins: [],
+  onReady: function(selectedDates,dateStr,instance){
+    instance.currentYearElement.disabled=true;
+  }
 });
 
-const STORAGE_KEY='attendance_logs_v8';
+flatpickr('#punchIn',{enableTime:true,noCalendar:true,dateFormat:'H:i',time_24hr:true});
+flatpickr('#punchOut',{enableTime:true,noCalendar:true,dateFormat:'H:i',time_24hr:true});
+
+// ===== Core Logic =====
+
+const STORAGE_KEY='attendance_logs_v9';
 const PRESENCE_START=540, PRESENCE_END=1050;
 const GRACE_MIN=10;
-const STAFF_LATE_FREE_LIMIT=570; // 09:30
-const STAFF_RELAX_LIMIT=600;     // 10:00
+const STAFF_LATE_FREE_LIMIT=570;
+const STAFF_RELAX_LIMIT=600;
 const STAFF_RELAX_PERCENT=0.30;
 
 const toMinutes=t=>{const[a,b]=t.split(':').map(Number);return a*60+b};
@@ -153,8 +157,6 @@ function renderCounters(){
   `Staff Relax: ${c.staffRelaxUsed}/${c.staffRelaxAllowed}`;
 }
 
-let editingDate=null;
-
 function saveEntry(){
  const date=datePicker.value;
  const emp=empType.value;
@@ -180,14 +182,12 @@ function saveEntry(){
  if(!outT){
   const inMinTmp = toMinutes(inT);
   let finalOutMin;
-
   if(inMinTmp > PRESENCE_START && inMinTmp <= PRESENCE_START + GRACE_MIN){
     finalOutMin = PRESENCE_END;
     flags.grace = true;
   } else {
     finalOutMin = Math.max(inMinTmp + hrs*60, PRESENCE_END);
   }
-
   outT = `${String(Math.floor(finalOutMin/60)%24).padStart(2,'0')}:${String(finalOutMin%60).padStart(2,'0')}`;
   flags.autoOut = true;
   flags.targetOut = outT;
@@ -220,11 +220,8 @@ function saveEntry(){
  }
 
  let status='Compliant';
-
- if(nonReason){
-  status='Non-Compliant: '+nonReason;
-  flags.reject = true;
- } else if(inMin>PRESENCE_START){
+ if(nonReason){ status='Non-Compliant: '+nonReason; flags.reject=true; }
+ else if(inMin>PRESENCE_START){
   const late=inMin-PRESENCE_START;
   if(late<=GRACE_MIN){flags.grace=true;status='Compliant (Grace)';}
   else{flags.lateComp=true;status='Compliant (Late Compensated)';}
@@ -269,7 +266,6 @@ function render(){
     `<td><button onclick="loadForEdit('${r.date}')">Edit</button></td>`+
     `<td><button onclick="deleteDay('${r.date}')">Delete</button></td>`+
     `<td>${r.status}</td>`;
-
    tb.appendChild(tr);
   });
  renderCounters();
@@ -278,7 +274,6 @@ function render(){
 function loadForEdit(d){
  const r=loadData().find(x=>x.date===d);
  if(!r) return;
- editingDate=d;
  datePicker.value=r.date;
  empType.value=r.emp;
  punchIn.value=r.inTime==='-'?'':r.inTime;
