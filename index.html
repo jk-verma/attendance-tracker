@@ -25,6 +25,9 @@ footer{text-align:center;margin-top:20px;color:#607d8b;font-size:13px}
 .time-wrapper{position:relative;width:100%;height:40px}
 .time-input{width:100%;height:40px;padding:0 40px 0 10px;box-sizing:border-box}
 .time-icon{position:absolute;right:10px;top:50%;transform:translateY(-50%);width:22px;height:22px;cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center;color:#666}
+.dropdown{position:absolute;background:#fff;border:1px solid #ccc;width:100%;display:none;z-index:1000}
+.dropdown div{padding:8px;cursor:pointer}
+.dropdown div:hover{background:#f1f1f1}
 </style>
 </head>
 <body>
@@ -52,7 +55,7 @@ footer{text-align:center;margin-top:20px;color:#607d8b;font-size:13px}
 <div class="row">
 <label>Punch-In Time</label>
 <div class="time-wrapper">
-<input type="text" id="punchIn" class="time-input" placeholder="__:__">
+<input type="text" id="punchIn" class="time-input" placeholder="__:__" autocomplete="off">
 <div class="time-icon" id="inIcon">🕒</div>
 </div>
 </div>
@@ -60,7 +63,7 @@ footer{text-align:center;margin-top:20px;color:#607d8b;font-size:13px}
 <div class="row">
 <label>Punch-Out Time</label>
 <div class="time-wrapper">
-<input type="text" id="punchOut" class="time-input" placeholder="__:__">
+<input type="text" id="punchOut" class="time-input" placeholder="__:__" autocomplete="off">
 <div class="time-icon" id="outIcon">🕒</div>
 </div>
 </div>
@@ -97,16 +100,29 @@ footer{text-align:center;margin-top:20px;color:#607d8b;font-size:13px}
 <table id="recordsTable">
 <thead>
 <tr>
-<th>Date</th><th>Emp</th><th>In</th><th>Out</th><th>Flags</th><th>Hours</th><th>Edit</th><th>Delete</th><th>Status</th>
+<th>Date</th><th>Emp</th><th>In</th><th>Out</th><th>Hours</th><th>Edit</th><th>Delete</th><th>Status</th><th>Reason</th>
 </tr>
 </thead>
 <tbody></tbody>
 </table>
 </div>
 
-<div class="row" style="margin-top:15px;gap:15px;grid-template-columns:1fr 1fr;">
-<button id="downloadBtn">Download Report (CSV)</button>
-<button id="deleteMonthBtn" style="background:#c62828;">Delete Selected Month</button>
+<div class="row" style="margin-top:15px;gap:15px;grid-template-columns:1fr 1fr 1fr;">
+<button id="importBtn">Import Report (CSV)</button>
+<div style="position:relative;">
+<button id="exportBtn">Export Report (CSV) ▼</button>
+<div id="exportMenu" class="dropdown">
+<div onclick="exportData('month')">Filter Month Data</div>
+<div onclick="exportData('all')">Entire Data</div>
+</div>
+</div>
+<div style="position:relative;">
+<button id="deleteBtn" style="background:#c62828;">Delete Data ▼</button>
+<div id="deleteMenu" class="dropdown">
+<div onclick="deleteData('month')">Filter Month Data</div>
+<div onclick="deleteData('all')">Entire Data</div>
+</div>
+</div>
 </div>
 
 <footer>© <span id="yr"></span> Attendance Tracker. All rights reserved.</footer>
@@ -116,226 +132,198 @@ footer{text-align:center;margin-top:20px;color:#607d8b;font-size:13px}
 <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/plugins/monthSelect/index.js"></script>
 <script>
 
-// INITIALIZATION
+// Initialization
 
-document.getElementById('yr').textContent = new Date().getFullYear();
+document.getElementById('yr').textContent=new Date().getFullYear();
 
-flatpickr('#monthFilter',{
-  plugins:[new monthSelectPlugin({shorthand:true,dateFormat:"Y-m",altFormat:"F Y"})]
-});
+flatpickr('#monthFilter',{plugins:[new monthSelectPlugin({shorthand:true,dateFormat:'Y-m',altFormat:'F Y'})]});
+flatpickr('#datePicker',{dateFormat:'Y-m-d',defaultDate:new Date()});
 
-flatpickr('#datePicker',{dateFormat:"Y-m-d",defaultDate:new Date()});
+const punchInPicker=flatpickr('#punchIn',{enableTime:true,noCalendar:true,dateFormat:'h:i K',minuteIncrement:5});
+const punchOutPicker=flatpickr('#punchOut',{enableTime:true,noCalendar:true,dateFormat:'h:i K',minuteIncrement:5});
 
-const punchInPicker = flatpickr('#punchIn',{enableTime:true,noCalendar:true,dateFormat:"h:i K",minuteIncrement:5,allowInput:true});
-const punchOutPicker = flatpickr('#punchOut',{enableTime:true,noCalendar:true,dateFormat:"h:i K",minuteIncrement:5,allowInput:true});
+document.getElementById('inIcon').onclick=()=>punchInPicker.open();
+document.getElementById('outIcon').onclick=()=>punchOutPicker.open();
 
-document.getElementById('inIcon').onclick = () => punchInPicker.open();
-document.getElementById('outIcon').onclick = () => punchOutPicker.open();
-
-// CORE LOGIC
-
-const STORAGE_KEY='attendance_records_v9';
+const STORAGE_KEY='attendance_records_v12';
 let editModeDate=null;
 
-function toMinutes(t){
-  if(!t) return null;
-  const d=new Date("1970-01-01 "+t);
-  return d.getHours()*60+d.getMinutes();
-}
-
-function isTimeComplete(v){
-  return v && v.includes(':');
-}
+function toMinutes(t){if(!t)return null;const d=new Date('1970-01-01 '+t);return d.getHours()*60+d.getMinutes();}
+function isTimeComplete(v){return v&&v.includes(':');}
 
 function evaluateAttendance(empType,inTime,outTime,isHoliday,isSpecial){
-
-  let flags={grace:false,relaxation:false,lateCompensation:false,hoursShort:false,lateEarlyTogether:false};
-
-  if(isHoliday) return {status:"Closed Holiday",flags};
-  if(isSpecial) return {status:"Special Leave",flags};
-
-  if(!isTimeComplete(inTime)||!isTimeComplete(outTime)){
-    flags.hoursShort=true;
-    return {status:"Non-Compliant: Hours Short",flags};
-  }
-
-  const inMin=toMinutes(inTime);
-  const outMin=toMinutes(outTime);
-  const required=parseFloat(document.getElementById('requiredHours').value)*60;
-  const worked=outMin-inMin;
-
-  const start=540;
-  const end=1050;
-
-  const late=inMin-start;
-  const early=end-outMin;
-
-  if(late>0&&early>0){
-    flags.lateEarlyTogether=true;
-    return {status:"Non-Compliant: Late + Early",flags};
-  }
-
-  if(late>0&&late<=10&&worked>=required){
-    flags.grace=true;
-    return {status:"Compliant: Grace",flags};
-  }
-
-  if(worked<required){
-    flags.hoursShort=true;
-    return {status:"Non-Compliant: Hours Short",flags};
-  }
-
-  if(empType==='faculty'&&inMin>630){
-    return {status:"Non-Compliant: 10:30 A.M.—Faculty",flags};
-  }
-
-  if(empType==='staff'&&inMin>600){
-    return {status:"Non-Compliant: 30% Rule—Staff",flags};
-  }
-
-  if(late>0){
-    flags.lateCompensation=true;
-    return {status:"Compliant: Late Compensation",flags};
-  }
-
-  return {status:"Compliant",flags};
+ if(isHoliday)return{status:'Compliant',reason:'Closed Holiday'};
+ if(isSpecial)return{status:'Compliant',reason:'Special Leave'};
+ if(!isTimeComplete(inTime)||!isTimeComplete(outTime))return{status:'Non-Compliant',reason:'Hours Short'};
+ const inMin=toMinutes(inTime);
+ const outMin=toMinutes(outTime);
+ const required=parseFloat(document.getElementById('requiredHours').value)*60;
+ const worked=outMin-inMin;
+ const start=540,end=1050;
+ const late=inMin-start,early=end-outMin;
+ if(late>0&&early>0)return{status:'Non-Compliant',reason:'Late + Early'};
+ if(late>0&&late<=10&&worked>=required)return{status:'Compliant',reason:'Grace'};
+ if(worked<required)return{status:'Non-Compliant',reason:'Hours Short'};
+ if(empType==='faculty'&&inMin>630)return{status:'Non-Compliant',reason:'After 10:30 A.M.—Faculty'};
+ if(empType==='staff'&&inMin>600)return{status:'Non-Compliant',reason:'After 10:00 A.M.—Staff'};
+ if(late>0)return{status:'Compliant',reason:'Late Compensation'};
+ return{status:'Compliant',reason:''};
 }
 
 function saveRecord(){
-  const date=document.getElementById('datePicker').value;
-  if(!date) return alert('Select date');
-
-  const empSelect=document.getElementById('empType');
-  const empType=empSelect.value;
-  const empLabel=empSelect.options[empSelect.selectedIndex].text;
-
-  const inTime=document.getElementById('punchIn').value;
-  let outTime=document.getElementById('punchOut').value;
-  const isHoliday=document.getElementById('closedHoliday').value==='yes';
-  const isSpecial=document.getElementById('specialLeave').value==='yes';
-
-  if(!isHoliday&&!isSpecial&&!isTimeComplete(inTime)){
-    alert('Punch-In Time is mandatory');
-    return;
-  }
-
-  if(!isHoliday&&!isSpecial&&!isTimeComplete(outTime)){
-    const inMin=toMinutes(inTime);
-    const required=parseFloat(document.getElementById('requiredHours').value)*60;
-    const targetMin=inMin+required;
-    const h=Math.floor(targetMin/60)%24;
-    const m=targetMin%60;
-    const d=new Date();
-    d.setHours(h);
-    d.setMinutes(m);
-    outTime=d.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
-    document.getElementById('punchOut').value=outTime;
-  }
-
-  const result=evaluateAttendance(empType,inTime,outTime,isHoliday,isSpecial);
-
-  let records=JSON.parse(localStorage.getItem(STORAGE_KEY)||'[]');
-  if(editModeDate) records=records.filter(r=>r.date!==editModeDate);
-  records=records.filter(r=>r.date!==date);
-
-  records.push({date,empType,empLabel,inTime,outTime,status:result.status,flags:result.flags});
-  records.sort((a,b)=>a.date.localeCompare(b.date));
-
-  localStorage.setItem(STORAGE_KEY,JSON.stringify(records));
-  editModeDate=null;
-  renderTable();
+ const date=document.getElementById('datePicker').value;
+ if(!date)return alert('Select date');
+ const empSelect=document.getElementById('empType');
+ const empType=empSelect.value;
+ const empLabel=empSelect.options[empSelect.selectedIndex].text;
+ const inTime=document.getElementById('punchIn').value;
+ let outTime=document.getElementById('punchOut').value;
+ const isHoliday=document.getElementById('closedHoliday').value==='yes';
+ const isSpecial=document.getElementById('specialLeave').value==='yes';
+ if(!isHoliday&&!isSpecial&&!isTimeComplete(inTime))return alert('Punch-In Time is mandatory');
+ let pending=false;
+ if(!isHoliday&&!isSpecial&&!isTimeComplete(outTime)){
+  const inMin=toMinutes(inTime);
+  const required=parseFloat(document.getElementById('requiredHours').value)*60;
+  const targetMin=inMin+required;
+  const h=Math.floor(targetMin/60)%24;
+  const m=targetMin%60;
+  const d=new Date();d.setHours(h);d.setMinutes(m);
+  outTime=d.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit',hour12:true});
+  document.getElementById('punchOut').value=outTime;
+  pending=true;
+ }
+ let result=pending?{status:'Pending',reason:'Target Punch-Out'}:evaluateAttendance(empType,inTime,outTime,isHoliday,isSpecial);
+ let records=JSON.parse(localStorage.getItem(STORAGE_KEY)||'[]');
+ if(editModeDate)records=records.filter(r=>r.date!==editModeDate);
+ records=records.filter(r=>r.date!==date);
+ records.push({date,empType,empLabel,inTime,outTime,status:result.status,reason:result.reason});
+ records.sort((a,b)=>a.date.localeCompare(b.date));
+ localStorage.setItem(STORAGE_KEY,JSON.stringify(records));
+ editModeDate=null;
+ renderTable();
 }
 
 function renderTable(){
-  const monthFilter=document.getElementById('monthFilter').value;
-  const tbody=document.querySelector('#recordsTable tbody');
-  tbody.innerHTML='';
-
-  let records=JSON.parse(localStorage.getItem(STORAGE_KEY)||'[]');
-  if(monthFilter) records=records.filter(r=>r.date.startsWith(monthFilter));
-
-  records.forEach(r=>{
-    const tr=document.createElement('tr');
-
-    if(r.status==='Closed Holiday'||r.status==='Special Leave'){
-      tr.className='status-neutral';
-    }else if(r.status.startsWith('Non-Compliant')){
-      tr.className='status-noncompliant';
-    }else{
-      tr.className='status-compliant';
-    }
-
-    const flagText=Object.keys(r.flags||{}).filter(k=>r.flags[k]).join(', ')||'-';
-    const hours=(toMinutes(r.outTime)&&toMinutes(r.inTime))?((toMinutes(r.outTime)-toMinutes(r.inTime))/60).toFixed(2):'-';
-
-    tr.innerHTML=`
-      <td>${r.date}</td>
-      <td>${r.empLabel}</td>
-      <td>${r.inTime}</td>
-      <td>${r.outTime}</td>
-      <td>${flagText}</td>
-      <td>${hours}</td>
-      <td><button onclick="editRecord('${r.date}')">Edit</button></td>
-      <td><button onclick="deleteRecord('${r.date}')">Delete</button></td>
-      <td>${r.status}</td>
-    `;
-
-    tbody.appendChild(tr);
-  });
+ const monthFilter=document.getElementById('monthFilter').value;
+ const tbody=document.querySelector('#recordsTable tbody');
+ tbody.innerHTML='';
+ let records=JSON.parse(localStorage.getItem(STORAGE_KEY)||'[]');
+ if(monthFilter)records=records.filter(r=>r.date.startsWith(monthFilter));
+ records.forEach(r=>{
+  const tr=document.createElement('tr');
+  if(r.reason==='Closed Holiday'||r.reason==='Special Leave')tr.className='status-neutral';
+  else if(r.status==='Non-Compliant')tr.className='status-noncompliant';
+  else tr.className='status-compliant';
+  const hours=(toMinutes(r.outTime)&&toMinutes(r.inTime))?((toMinutes(r.outTime)-toMinutes(r.inTime))/60).toFixed(2):'-';
+  tr.innerHTML=`<td>${r.date}</td><td>${r.empLabel}</td><td>${r.inTime}</td><td>${r.outTime}</td><td>${hours}</td><td><button onclick="editRecord('${r.date}')">Edit</button></td><td><button onclick="deleteRecord('${r.date}')">Delete</button></td><td>${r.status}</td><td>${r.reason||'-'}</td>`;
+  tbody.appendChild(tr);
+ });
 }
 
 function editRecord(d){
-  const records=JSON.parse(localStorage.getItem(STORAGE_KEY)||'[]');
-  const r=records.find(x=>x.date===d);
-  if(!r) return;
-  document.getElementById('datePicker').value=r.date;
-  document.getElementById('empType').value=r.empType;
-  document.getElementById('punchIn').value=r.inTime;
-  document.getElementById('punchOut').value=r.outTime;
-  editModeDate=d;
+ const records=JSON.parse(localStorage.getItem(STORAGE_KEY)||'[]');
+ const r=records.find(x=>x.date===d);
+ if(!r)return;
+ document.getElementById('datePicker').value=r.date;
+ document.getElementById('empType').value=r.empType;
+ document.getElementById('punchIn').value=r.inTime;
+ document.getElementById('punchOut').value=r.outTime;
+ editModeDate=d;
 }
 
 function deleteRecord(d){
-  if(!confirm('Delete record?')) return;
-  let records=JSON.parse(localStorage.getItem(STORAGE_KEY)||'[]');
-  records=records.filter(r=>r.date!==d);
-  localStorage.setItem(STORAGE_KEY,JSON.stringify(records));
-  renderTable();
+ if(!confirm('Delete record?'))return;
+ let records=JSON.parse(localStorage.getItem(STORAGE_KEY)||'[]');
+ records=records.filter(r=>r.date!==d);
+ localStorage.setItem(STORAGE_KEY,JSON.stringify(records));
+ renderTable();
 }
 
-function downloadCSV(){
-  let records=JSON.parse(localStorage.getItem(STORAGE_KEY)||'[]');
-  const monthFilter=document.getElementById('monthFilter').value;
-  if(monthFilter) records=records.filter(r=>r.date.startsWith(monthFilter));
-
-  let csv="Date,Employee,In,Out,Status\n";
-  records.forEach(r=>{
-    csv+=`${r.date},${r.empLabel},${r.inTime},${r.outTime},${r.status}\n`;
-  });
-
-  const blob=new Blob([csv],{type:'text/csv'});
-  const a=document.createElement('a');
-  a.href=URL.createObjectURL(blob);
-  a.download='attendance_report.csv';
-  a.click();
+function exportData(mode){
+ let records=JSON.parse(localStorage.getItem(STORAGE_KEY)||'[]');
+ const monthFilter=document.getElementById('monthFilter').value;
+ if(mode==='month'){
+  if(!monthFilter)return alert('Select month first');
+  records=records.filter(r=>r.date.startsWith(monthFilter));
+ }
+ let csv='Date,Emp,In,Out,Status,Reason\n';
+ records.forEach(r=>{
+  csv+=`${r.date},${r.empLabel},${r.inTime},${r.outTime},${r.status},${r.reason||''}\n`;
+ });
+ const blob=new Blob([csv],{type:'text/csv'});
+ const a=document.createElement('a');
+ a.href=URL.createObjectURL(blob);
+ a.download='attendance_report.csv';
+ a.click();
+ document.getElementById('exportMenu').style.display='none';
 }
 
-function deleteSelectedMonth(){
-  const monthFilter=document.getElementById('monthFilter').value;
-  if(!monthFilter) return alert('Select month first');
-  if(!confirm('Delete all records for selected month?')) return;
-
-  let records=JSON.parse(localStorage.getItem(STORAGE_KEY)||'[]');
+function deleteData(mode){
+ let records=JSON.parse(localStorage.getItem(STORAGE_KEY)||'[]');
+ const monthFilter=document.getElementById('monthFilter').value;
+ if(mode==='month'){
+  if(!monthFilter)return alert('Select month first');
+  if(!confirm('Delete all records for selected month?'))return;
   records=records.filter(r=>!r.date.startsWith(monthFilter));
-  localStorage.setItem(STORAGE_KEY,JSON.stringify(records));
-  renderTable();
+ }else{
+  if(!confirm('Delete entire data?'))return;
+  records=[];
+ }
+ localStorage.setItem(STORAGE_KEY,JSON.stringify(records));
+ renderTable();
+ document.getElementById('deleteMenu').style.display='none';
 }
 
-// EVENTS
+function importCSV(){
+ const input=document.createElement('input');
+ input.type='file';
+ input.accept='.csv';
+ input.onchange=e=>{
+  const file=e.target.files[0];
+  const reader=new FileReader();
+  reader.onload=function(){
+   const text=reader.result.trim();
+   const lines=text.split('\n');
+   if(lines.length<2){alert('Invalid CSV file.');return;}
+   const header=lines[0].trim();
+   if(header!=='Date,Emp,In,Out,Status,Reason'){
+    alert('Invalid format. Please import exported attendance CSV file only.');
+    return;
+   }
+   let existing=JSON.parse(localStorage.getItem(STORAGE_KEY)||'[]');
+   lines.slice(1).forEach(line=>{
+    if(!line.trim())return;
+    const parts=line.split(',');
+    if(parts.length<6)return;
+    const [date,emp,inTime,outTime,status,reason]=parts;
+    existing=existing.filter(r=>r.date!==date.trim());
+    existing.push({
+      date:date.trim(),
+      empLabel:emp.trim(),
+      empType:emp.trim().toLowerCase(),
+      inTime:inTime.trim(),
+      outTime:outTime.trim(),
+      status:status.trim(),
+      reason:(reason||'').trim()
+    });
+   });
+   existing.sort((a,b)=>a.date.localeCompare(b.date));
+   localStorage.setItem(STORAGE_KEY,JSON.stringify(existing));
+   renderTable();
+   alert('Import successful. Data merged by date.');
+  };
+  reader.readAsText(file);
+ };
+ input.click();
+}
+
+// Events
 
 document.getElementById('saveBtn').addEventListener('click',saveRecord);
-document.getElementById('downloadBtn').addEventListener('click',downloadCSV);
-document.getElementById('deleteMonthBtn').addEventListener('click',deleteSelectedMonth);
+document.getElementById('exportBtn').addEventListener('click',()=>{const m=document.getElementById('exportMenu');m.style.display=m.style.display==='block'?'none':'block';});
+document.getElementById('deleteBtn').addEventListener('click',()=>{const m=document.getElementById('deleteMenu');m.style.display=m.style.display==='block'?'none':'block';});
+document.getElementById('importBtn').addEventListener('click',importCSV);
 document.getElementById('monthFilter').addEventListener('change',renderTable);
 
 renderTable();
