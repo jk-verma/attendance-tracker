@@ -368,44 +368,98 @@
            ATTENDANCE EVALUATION ENGINE
         ===================================== */
 
-        function evaluateAttendance(empType, inTime, outTime, isHoliday, isSpecial) {
+        function evaluateAttendance(empType, inTime, outTime, isHoliday, isSpecial, date) {
 
+            // Closed Holiday / Special Leave
             if (isHoliday) return { status: 'Compliant', reason: 'Closed Holiday' };
             if (isSpecial) return { status: 'Compliant', reason: 'Special Leave' };
 
             if (!isTimeComplete(inTime) || !isTimeComplete(outTime))
-                return { status: 'Non-Compliant', reason: 'Hours Short' };
+                return { status: 'Non-Compliant', reason: 'REJECT' };
 
             const inMin = toMinutes(inTime);
             const outMin = toMinutes(outTime);
-            const required = parseFloat(document.getElementById('requiredHours').value) * 60;
             const worked = outMin - inMin;
 
-            const officeStart = 540; // 9:00 AM
-            const officeEnd = 1050;  // 5:30 PM
+            const officeStart = 540;   // 9:00 AM
+            const officeEnd = 1050;    // 5:30 PM
+            const relaxEarlyLimit = 990; // 4:30 PM
 
-            const late = inMin - officeStart;
-            const early = officeEnd - outMin;
+            const month = date.slice(0, 7);
+            const records = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
 
-            if (late > 0 && early > 0)
-                return { status: 'Non-Compliant', reason: 'Late + Early' };
+            // Count Semimonthly Relaxation in same month
+            const relaxCount = records.filter(r =>
+                r.date.startsWith(month) &&
+                r.reason === 'Semimonthly Relaxation'
+            ).length;
 
-            if (late > 0 && late <= 10 && worked >= required)
-                return { status: 'Compliant', reason: 'Grace' };
+            // ================= FACULTY RULES =================
+            if (empType === 'faculty') {
 
-            if (worked < required)
-                return { status: 'Non-Compliant', reason: 'Hours Short' };
+                if (inMin <= officeStart && outMin >= officeEnd)
+                    return { status: 'Compliant', reason: 'On-Time' };
 
-            if (empType === 'faculty' && inMin > 630)
-                return { status: 'Non-Compliant', reason: 'After 10:30 A.M.—Faculty' };
+                if (inMin > officeStart && inMin <= 550 && outMin >= officeEnd)
+                    return { status: 'Compliant', reason: 'Grace' };
 
-            if (empType === 'staff' && inMin > 600)
-                return { status: 'Non-Compliant', reason: 'After 10:00 A.M.—Staff' };
+                if (
+                    relaxCount < 2 && (
+                        (inMin <= 600 && outMin >= officeEnd) ||
+                        (inMin <= officeStart && outMin >= relaxEarlyLimit)
+                    )
+                ) {
+                    return { status: 'Compliant', reason: 'Semimonthly Relaxation' };
+                }
 
-            if (late > 0)
-                return { status: 'Compliant', reason: 'Late Compensation' };
+                if (inMin > 550 && inMin <= 630 && worked >= 510)
+                    return { status: 'Compliant', reason: 'Late Compensation' };
 
-            return { status: 'Compliant', reason: '' };
+                return { status: 'Non-Compliant', reason: 'REJECT' };
+            }
+
+            // ================= STAFF RULES =================
+            if (empType === 'staff') {
+
+                if (inMin <= officeStart && outMin >= officeEnd)
+                    return { status: 'Compliant', reason: 'On-Time' };
+
+                if (inMin > officeStart && inMin <= 550 && outMin >= officeEnd)
+                    return { status: 'Compliant', reason: 'Grace' };
+
+                if (
+                    relaxCount < 2 && (
+                        (inMin <= 600 && outMin >= officeEnd) ||
+                        (inMin <= officeStart && outMin >= relaxEarlyLimit)
+                    )
+                ) {
+                    return { status: 'Compliant', reason: 'Semimonthly Relaxation' };
+                }
+
+                if (inMin > 550 && inMin <= 570 && worked >= 510)
+                    return { status: 'Compliant', reason: 'Late Compensation—Type I' };
+
+                if (inMin > 570 && inMin <= 600 && worked >= 510) {
+
+                    const monthRecords = records.filter(r => r.date.startsWith(month));
+                    const workingDays = monthRecords.filter(r =>
+                        r.reason !== 'Closed Holiday'
+                    ).length;
+
+                    const typeIICount = monthRecords.filter(r =>
+                        r.reason === 'Late Compensation—Type II'
+                    ).length;
+
+                    const allowed = Math.floor(workingDays * 0.30);
+
+                    if (typeIICount < allowed)
+                        return { status: 'Compliant', reason: 'Late Compensation—Type II' };
+                }
+
+                return { status: 'Non-Compliant', reason: 'REJECT' };
+            }
+
+            return { status: 'Non-Compliant', reason: 'REJECT' };
         }
 
         /* =====================================
@@ -458,7 +512,7 @@
 
             const result = pending
                 ? { status: 'Pending Punch-Out', reason: 'Auto-Calculated' }
-                : evaluateAttendance(empType, inTime, outTime, isHoliday, isSpecial);
+                : evaluateAttendance(empType, inTime, outTime, isHoliday, isSpecial, date);
 
             let records = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
 
