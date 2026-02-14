@@ -250,9 +250,11 @@ function evaluateFaculty(inMin,outMin,worked){
     }
 
     // 3️⃣ Late Compensation (09:11–10:30 AND full 8.5 hrs duty)
+    // STRICT: must complete at least 8.5 hours (510 minutes)
     if(inMin > 550 && inMin <= 630 && worked >= FULL_DUTY){
         return {status:'Compliant',reason:'Late Compensation'};
     }
+
 
     // 4️⃣ Semimonthly Relaxation (≤2 per month handled separately)
     // Either late up to 10:00 OR early leaving up to 04:30
@@ -300,12 +302,14 @@ function evaluateStaff(inMin,outMin,worked){
         return {status:'Compliant',reason:'Grace'};
     }
 
-    // 3️⃣ Semimonthly Relaxation
+    // 3️⃣ Semimonthly Relaxation (≤2 per month handled in recalculation)
     if(
         (inMin > OFFICE_START && inMin <= 600 && outMin >= OFFICE_END) ||
         (inMin <= OFFICE_START && outMin >= EARLY_LIMIT && outMin < OFFICE_END)
       ){
-        return {status:'Compliant',reason:'Semimonthly Relaxation'};
+        if(worked >= 450 && worked < MIN_DUTY){
+            return {status:'Compliant',reason:'Semimonthly Relaxation'};
+        }
     }
 
     // 4️⃣ Late Compensation Type I (09:11–09:30)
