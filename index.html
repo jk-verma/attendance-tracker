@@ -300,12 +300,18 @@ return;
 }
 
 if(!isHoliday && !isSpecial && inTime && !outTime){
-    // Save as Pending Punch-Out (retain Punch-In, allow later overwrite)
+    // Auto-calculate target Punch-Out based on Required Daily Hours
+    const requiredHours = parseFloat(dailyHours.value || '8.5');
+    const inMin = toMinutes(inTime);
+    const targetOutMin = inMin + (requiredHours * 60);
+    const targetDate = new Date(1970,0,1,0,targetOutMin);
+    const targetOut = targetDate.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});
+
     records.push({
         date,
         empLabel,
         inTime,
-        outTime:'',
+        outTime:targetOut,
         hours:0,
         status:'Non-Compliant',
         reason:'Pending Punch-Out'
@@ -324,7 +330,7 @@ editingDate=null; // reset editing mode after final save
 renderTable(false);
 }
 
-function renderTable(showSummary=true){
+function renderTable(showSummary=false){
 const month=monthFilter.value;
 const tbody=document.querySelector('#recordsTable tbody');
 let records=JSON.parse(localStorage.getItem(STORAGE_KEY)||'[]')
@@ -371,7 +377,7 @@ if(!confirm('Delete record for '+date+'?'))return;
 let records=JSON.parse(localStorage.getItem(STORAGE_KEY)||'[]');
 records=records.filter(r=>r.date!==date);
 localStorage.setItem(STORAGE_KEY,JSON.stringify(records));
-renderTable();
+renderTable(false);
 }
 
 // ===== Month Summary Function =====
@@ -435,9 +441,16 @@ function renderMonthSummary(month){
 }
 
 /* ================= EVENT BINDINGS ================= */
+saveBtn.addEventListener('click',()=>renderTable(false));
 saveBtn.addEventListener('click',saveRecord);
-monthFilter.addEventListener('change',()=>renderTable(true));
-empType.addEventListener('change',()=>renderTable(true));
+monthFilter.addEventListener('change',()=>{
+    if(monthFilter.value){
+        renderTable(true); // deliberate month selection
+    } else {
+        renderTable(false);
+    }
+});
+empType.addEventListener('change',()=>renderTable(false));
 
 renderTable();
 </script>
