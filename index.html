@@ -208,23 +208,118 @@ function runAttendanceTests(){
 
 function toMinutes(t){if(!t)return 0;const d=new Date('1970-01-01 '+t);return d.getHours()*60+d.getMinutes();}
 
-function evaluateFaculty(inMin,outMin,worked,relaxCount){
-const officeStart=540, officeEnd=1050, relaxEarly=990;
-if(inMin<=officeStart && outMin>=officeEnd) return {status:'Compliant',reason:'On-Time'};
-if(inMin>officeStart && inMin<=550 && outMin>=officeEnd) return {status:'Compliant',reason:'Grace'};
-if(relaxCount<2 && ((inMin<=600 && outMin>=officeEnd)||(inMin<=officeStart && outMin>=relaxEarly))) return {status:'Compliant',reason:'Semimonthly Relaxation'};
-if(inMin>550 && inMin<=630 && worked>=510) return {status:'Compliant',reason:'Late Compensation'};
-return {status:'Non-Compliant',reason:'REJECT'};
+/* ============================================================
+   ================= FACULTY ATTENDANCE RULES =================
+   Office Timing:
+   - Start : 09:00 AM (540)
+   - End   : 05:30 PM (1050)
+   - Early Relax Limit : 04:30 PM (990)
+
+   Rule Order (STRICT PRIORITY):
+   1. On-Time
+   2. Grace (09:01–09:10)
+   3. Semimonthly Relaxation (≤2 per month, controlled in recalculation)
+   4. Late Compensation (09:11–10:30 with ≥8.5 hrs)
+   5. Else → REJECT
+============================================================ */
+function evaluateFaculty(inMin,outMin,worked){
+
+    const OFFICE_START = 540;   // 09:00 AM
+    const OFFICE_END   = 1050;  // 05:30 PM
+    const EARLY_LIMIT  = 990;   // 04:30 PM
+    const FULL_DUTY    = 510;   // 8.5 hrs (in minutes)
+    const RELAX_DUTY   = 450;   // 7.5 hrs (in minutes)
+
+    /* ======================================================
+       Priority Order (STRICT)
+       1. On-Time
+       2. Grace
+       3. Late Compensation (full 8.5 hrs completion)
+       4. Semimonthly Relaxation (7.5–8.5 hrs window)
+       5. Else → REJECT
+    ======================================================= */
+
+    // 1️⃣ On-Time
+    if(inMin <= OFFICE_START && outMin >= OFFICE_END){
+        return {status:'Compliant',reason:'On-Time'};
+    }
+
+    // 2️⃣ Grace (09:01–09:10)
+    if(inMin > OFFICE_START && inMin <= 550 && outMin >= OFFICE_END){
+        return {status:'Compliant',reason:'Grace'};
+    }
+
+    // 3️⃣ Late Compensation (09:11–10:30 AND full 8.5 hrs duty)
+    if(inMin > 550 && inMin <= 630 && worked >= FULL_DUTY){
+        return {status:'Compliant',reason:'Late Compensation'};
+    }
+
+    // 4️⃣ Semimonthly Relaxation (≤2 per month handled separately)
+    // Either late up to 10:00 OR early leaving up to 04:30
+    // Duty must be between 7.5 hrs and less than 8.5 hrs
+    const lateRelax = (inMin > OFFICE_START && inMin <= 600 && outMin >= OFFICE_END);
+    const earlyRelax = (inMin <= OFFICE_START && outMin >= EARLY_LIMIT && outMin < OFFICE_END);
+
+    if((lateRelax || earlyRelax) && worked >= RELAX_DUTY && worked < FULL_DUTY){
+        return {status:'Compliant',reason:'Semimonthly Relaxation'};
+    }
+
+    // 5️⃣ Default
+    return {status:'Non-Compliant',reason:'REJECT'};
 }
 
-function evaluateStaff(inMin,outMin,worked,relaxCount){
-const officeStart=540, officeEnd=1050, relaxEarly=990;
-if(inMin<=officeStart && outMin>=officeEnd) return {status:'Compliant',reason:'On-Time'};
-if(inMin>officeStart && inMin<=550 && outMin>=officeEnd) return {status:'Compliant',reason:'Grace'};
-if(relaxCount<2 && ((inMin<=600 && outMin>=officeEnd)||(inMin<=officeStart && outMin>=relaxEarly))) return {status:'Compliant',reason:'Semimonthly Relaxation'};
-if(inMin>550 && inMin<=570 && worked>=510) return {status:'Compliant',reason:'Late Compensation-Type I'};
-if(inMin>570 && inMin<=600 && worked>=510) return {status:'Compliant',reason:'Late Compensation-Type II'};
-return {status:'Non-Compliant',reason:'REJECT'};
+/* ============================================================
+   ================= STAFF ATTENDANCE RULES =================
+   Office Timing:
+   - Start : 09:00 AM (540)
+   - End   : 05:30 PM (1050)
+   - Early Relax Limit : 04:30 PM (990)
+
+   Rule Order (STRICT PRIORITY):
+   1. On-Time
+   2. Grace (09:01–09:10)
+   3. Semimonthly Relaxation (≤2 per month)
+   4. Late Compensation Type I  (09:11–09:30 ≥8.5 hrs)
+   5. Late Compensation Type II (09:31–10:00 ≥8.5 hrs, 30% cap handled in recalculation)
+   6. Else → REJECT
+============================================================ */
+function evaluateStaff(inMin,outMin,worked){
+
+    const OFFICE_START = 540;
+    const OFFICE_END   = 1050;
+    const EARLY_LIMIT  = 990;
+    const MIN_DUTY     = 510; // 8.5 hrs
+
+    // 1️⃣ On-Time
+    if(inMin <= OFFICE_START && outMin >= OFFICE_END){
+        return {status:'Compliant',reason:'On-Time'};
+    }
+
+    // 2️⃣ Grace
+    if(inMin > OFFICE_START && inMin <= 550 && outMin >= OFFICE_END){
+        return {status:'Compliant',reason:'Grace'};
+    }
+
+    // 3️⃣ Semimonthly Relaxation
+    if(
+        (inMin > OFFICE_START && inMin <= 600 && outMin >= OFFICE_END) ||
+        (inMin <= OFFICE_START && outMin >= EARLY_LIMIT && outMin < OFFICE_END)
+      ){
+        return {status:'Compliant',reason:'Semimonthly Relaxation'};
+    }
+
+    // 4️⃣ Late Compensation Type I (09:11–09:30)
+    if(inMin > 550 && inMin <= 570 && worked >= MIN_DUTY){
+        return {status:'Compliant',reason:'Late Compensation-Type I'};
+    }
+
+    // 5️⃣ Late Compensation Type II (09:31–10:00)
+    if(inMin > 570 && inMin <= 600 && worked >= MIN_DUTY){
+        return {status:'Compliant',reason:'Late Compensation-Type II'};
+    }
+
+    // 6️⃣ Default
+    return {status:'Non-Compliant',reason:'REJECT'};
 }
 
 function evaluateAttendance(emp,inTime,outTime,date,isHoliday,isSpecial){
@@ -234,20 +329,9 @@ if(isSpecial) return {status:'Compliant',reason:'Special Leave'};
 const inMin=toMinutes(inTime);
 const outMin=toMinutes(outTime);
 const worked=outMin-inMin;
-const month=date.slice(0,7);
 
-// IMPORTANT: Relaxation must be applied in chronological order
-let records=JSON.parse(localStorage.getItem(STORAGE_KEY)||'[]')
-    .filter(r=>r.date.startsWith(month))
-    .sort((a,b)=>a.date.localeCompare(b.date));
-
-let relaxCount=0;
-records.forEach(r=>{
-    if(r.reason==='Semimonthly Relaxation') relaxCount++;
-});
-
-if(emp==='faculty') return evaluateFaculty(inMin,outMin,worked,relaxCount);
-if(emp==='staff') return evaluateStaff(inMin,outMin,worked,relaxCount);
+if(emp==='faculty') return evaluateFaculty(inMin,outMin,worked);
+if(emp==='staff') return evaluateStaff(inMin,outMin,worked);
 
 return {status:'Non-Compliant',reason:'REJECT'};
 }
@@ -326,8 +410,47 @@ const result=evaluateAttendance(emp,inTime,outTime,date,isHoliday,isSpecial);
 const hours=isHoliday||isSpecial?0:((toMinutes(outTime)-toMinutes(inTime))/60).toFixed(2);
 records.push({date,empLabel,inTime,outTime,hours,status:result.status,reason:result.reason});
 localStorage.setItem(STORAGE_KEY,JSON.stringify(records));
-editingDate=null; // reset editing mode after final save
+editingDate=null;
+recalculateMonth(date.slice(0,7));
 renderTable(false);
+}
+
+// ===== Recalculate Entire Month Chronologically =====
+function recalculateMonth(month){
+    let records=JSON.parse(localStorage.getItem(STORAGE_KEY)||'[]');
+    let monthRecords=records
+        .filter(r=>r.date.startsWith(month))
+        .sort((a,b)=>a.date.localeCompare(b.date));
+
+    let relaxCountFaculty=0;
+    let relaxCountStaff=0;
+
+    monthRecords.forEach(r=>{
+        if(r.reason==='Closed Holiday'||r.reason==='Special Leave'||r.reason==='Pending Punch-Out') return;
+
+        const emp=r.empLabel.toLowerCase();
+        const result=evaluateAttendance(emp,r.inTime,r.outTime,r.date,false,false);
+
+        // Chronological relaxation control
+        if(result.reason==='Semimonthly Relaxation'){
+            if(emp==='faculty'){
+                if(relaxCountFaculty<2){relaxCountFaculty++;}
+                else{r.status='Non-Compliant';r.reason='REJECT';return;}
+            }
+            if(emp==='staff'){
+                if(relaxCountStaff<2){relaxCountStaff++;}
+                else{r.status='Non-Compliant';r.reason='REJECT';return;}
+            }
+        }
+
+        r.status=result.status;
+        r.reason=result.reason;
+    });
+
+    // Merge back into full dataset
+    records=records.filter(r=>!r.date.startsWith(month)).concat(monthRecords);
+    records.sort((a,b)=>a.date.localeCompare(b.date));
+    localStorage.setItem(STORAGE_KEY,JSON.stringify(records));
 }
 
 function renderTable(showSummary=false){
