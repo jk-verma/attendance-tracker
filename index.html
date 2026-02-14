@@ -236,8 +236,15 @@ const outMin=toMinutes(outTime);
 const worked=outMin-inMin;
 const month=date.slice(0,7);
 
-const records=JSON.parse(localStorage.getItem(STORAGE_KEY)||'[]');
-const relaxCount=records.filter(r=>r.date.startsWith(month)&&r.reason==='Semimonthly Relaxation').length;
+// IMPORTANT: Relaxation must be applied in chronological order
+let records=JSON.parse(localStorage.getItem(STORAGE_KEY)||'[]')
+    .filter(r=>r.date.startsWith(month))
+    .sort((a,b)=>a.date.localeCompare(b.date));
+
+let relaxCount=0;
+records.forEach(r=>{
+    if(r.reason==='Semimonthly Relaxation') relaxCount++;
+});
 
 if(emp==='faculty') return evaluateFaculty(inMin,outMin,worked,relaxCount);
 if(emp==='staff') return evaluateStaff(inMin,outMin,worked,relaxCount);
@@ -320,7 +327,8 @@ renderTable(false);
 function renderTable(showSummary=true){
 const month=monthFilter.value;
 const tbody=document.querySelector('#recordsTable tbody');
-let records=JSON.parse(localStorage.getItem(STORAGE_KEY)||'[]');
+let records=JSON.parse(localStorage.getItem(STORAGE_KEY)||'[]')
+    .sort((a,b)=>a.date.localeCompare(b.date)); // Always sort globally by date
 
 if(month) records=records.filter(r=>r.date.startsWith(month));
 else records=records.filter(r=>r.date.startsWith(new Date().toISOString().slice(0,7)));
