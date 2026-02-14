@@ -3,36 +3,43 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Punch-In/Out Tracker</title>
+<title>Attendance Punch In / Punch Out Tracker</title>
+
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/plugins/monthSelect/style.css">
+
 <style>
+/* ================= UI STYLING SECTION ================= */
 body{font-family:Segoe UI,Tahoma,sans-serif;background:linear-gradient(#e3f2fd,#fff);margin:0;padding:20px}
 .container{max-width:1050px;margin:auto;background:#fff;border-radius:12px;box-shadow:0 6px 12px rgba(0,0,0,.15);padding:20px}
 h2{text-align:center;color:#0d47a1}
 .row{display:grid;grid-template-columns:260px 1fr;gap:10px;margin-bottom:12px;align-items:center}
-input,select,button{height:36px;font-size:14px}
-button{background:#1976d2;color:#fff;border:none;border-radius:6px;cursor:pointer}
+input,select,button{height:40px;font-size:14px;width:100%;box-sizing:border-box;padding:0 10px;border-radius:6px;border:1px solid #ccc}
+button{background:#1976d2;color:#fff;border:none;cursor:pointer}
 button:hover{background:#1565c0}
 .table-wrap{overflow-x:auto;margin-top:20px}
 table{border-collapse:collapse;width:100%}
-th,td{border:1px solid #ccc;padding:8px;text-align:center}
+th,td{border:1px solid #ccc;padding:8px;text-align:center;font-size:13px}
 th{background:#e3f2fd}
-.status-full{background:#e8f5e9}
-.status-late{background:#fffde7}
-.status-auto{background:#ffeb3b;font-weight:600}
-.status-special{background:#e3f2fd;font-style:italic}
-.status-non{background:#ffebee}
-footer{text-align:center;margin-top:20px;color:#607d8b}
-.danger{background:#c62828}
-.danger:hover{background:#b71c1c}
-.counter-box{background:#f1f8ff;padding:10px;border-radius:8px;margin-bottom:15px}
-.note{font-size:0.9em;color:#455a64}
+.status-compliant{background:#e8f5e9}
+.status-noncompliant{background:#ffebee}
+.status-neutral{background:#eceff1}
+.status-pending{background:#ffeb3b}
+#monthSummary{background:#e3f2fd;padding:12px 40px 12px 12px;border-radius:8px;margin-bottom:15px;font-size:14px;display:none;position:relative}
+#summaryClose{position:absolute;top:8px;right:10px;background:#1976d2;color:#fff;border:none;border-radius:50%;width:22px;height:22px;font-size:12px;cursor:pointer}
+.action-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:15px;margin-top:15px}
+.dropdown{position:relative}
+.dropdown-menu{display:none;position:absolute;width:100%;background:#fff;border:1px solid #ccc;z-index:10}
+.dropdown-menu div{padding:8px;cursor:pointer}
+.dropdown-menu div:hover{background:#f1f1f1}
 </style>
 </head>
+
 <body>
 <div class="container">
 <h2>Monthly Attendance Punch Tracker</h2>
 
+<!-- ================= UI CONTROLS SECTION ================= -->
 <div class="row">
 <label>Employee Type</label>
 <select id="empType">
@@ -43,10 +50,10 @@ footer{text-align:center;margin-top:20px;color:#607d8b}
 
 <div class="row">
 <label>Filter Month</label>
-<input type="month" id="monthFilter">
+<input type="text" id="monthFilter">
 </div>
 
-<div class="counter-box" id="counters"></div>
+<div id="monthSummary"><button id="summaryClose">×</button></div>
 
 <div class="row">
 <label>Date</label>
@@ -54,265 +61,525 @@ footer{text-align:center;margin-top:20px;color:#607d8b}
 </div>
 
 <div class="row">
-<label>Punch-In Time</label>
-<input type="time" id="punchIn">
+<label>Punch-In</label>
+<input type="text" id="punchIn" autocomplete="off">
 </div>
 
 <div class="row">
-<label>Punch-Out Time</label>
-<input type="time" id="punchOut">
+<label>Punch-Out</label>
+<input type="text" id="punchOut" autocomplete="off">
 </div>
 
 <div class="row">
-<label>Special Leave (Accident / Death)</label>
-<select id="specialLeave">
+<label>Required Daily Hours</label>
+<select id="dailyHours">
+<option value="8.5">8h 30m (8.5 Hours - Standard Duty)</option>
+<option value="8">8h 00m</option>
+<option value="7.5">7h 30m</option>
+<option value="7">7h 00m</option>
+</select>
+</div>
+
+<div class="row">
+<label>Closed Holiday</label>
+<select id="closedHoliday">
 <option value="no">No</option>
 <option value="yes">Yes</option>
 </select>
 </div>
 
 <div class="row">
-<label>Required Daily Hours</label>
-<select id="dailyHours">
-<option value="8.5">8h 30m (Standard)</option>
-<option value="7.5">7h 30m</option>
+<label>Special Leave</label>
+<select id="specialLeave">
+<option value="no">No</option>
+<option value="yes">Yes</option>
 </select>
 </div>
 
-<div class="note">Late coming, early leaving, or special leave will be automatically inferred.<br><b>Staff relaxation rule:</b> Arrival between 09:30–10:00 is allowed only up to <b>30% of total working days</b> in the month (excluding special leave days), subject to full-hour compensation.</div>
+<button id="saveBtn">Save Punch</button>
 
-<button id="saveBtn" type="button">Save Punch</button>
-
+<!-- ================= TABLE SECTION ================= -->
 <div class="table-wrap">
-<table id="logTable">
+<table id="recordsTable">
 <thead>
 <tr>
-<th>Date</th><th>Emp</th><th>In</th><th>Out</th><th>Flags</th><th>Hours</th><th>Edit</th><th>Action</th><th>Status</th>
+<th>Date</th>
+<th>Emp</th>
+<th>In</th>
+<th>Out</th>
+<th>Hours</th>
+<th>Status</th>
+<th>Reason</th>
+<th>Edit</th>
+<th>Action</th>
 </tr>
 </thead>
 <tbody></tbody>
 </table>
 </div>
 
-<button id="exportBtn">Download Monthly Report (CSV)</button>
-<button id="deleteMonthBtn" class="danger">Delete Selected Month</button>
-<footer>© <span id="yr"></span> Attendance Tracker. All rights reserved.</footer>
+<div class="action-row">
+<button id="importBtn">Import Report (CSV)</button>
+
+<div class="dropdown">
+<button id="exportBtn">Export Report (CSV) ▼</button>
+<div id="exportMenu" class="dropdown-menu">
+<div onclick="exportData('month')">Filter Month Data</div>
+<div onclick="exportData('all')">Entire Data</div>
+</div>
+</div>
+
+<div class="dropdown">
+<button id="deleteBtn" style="background:#c62828">Delete Data ▼</button>
+<div id="deleteMenu" class="dropdown-menu">
+<div onclick="deleteData('month')">Filter Month Data</div>
+<div onclick="deleteData('all')">Entire Data</div>
+</div>
+</div>
+</div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/plugins/monthSelect/index.js"></script>
+
 <script>
-// ===== Setup =====
-document.getElementById('yr').textContent=new Date().getFullYear();
+/* ============================================================
+   ================= UI INITIALIZATION SECTION =================
+   (ONLY UI related bindings and pickers go here)
+============================================================ */
+
+const STORAGE_KEY='attendance_records_v16';
+let editingDate = null; // Tracks if record is being edited
+
+flatpickr('#monthFilter',{plugins:[new monthSelectPlugin({dateFormat:'Y-m'})]});
 flatpickr('#datePicker',{dateFormat:'Y-m-d',defaultDate:new Date()});
+flatpickr('#punchIn',{enableTime:true,noCalendar:true,dateFormat:'h:i K',defaultHour:9,defaultMinute:0,allowInput:true});
+flatpickr('#punchOut',{enableTime:true,noCalendar:true,dateFormat:'h:i K',defaultHour:17,defaultMinute:30,allowInput:true});
 
-const STORAGE_KEY='attendance_logs_v8';
-const PRESENCE_START=540, PRESENCE_END=1050;
-const GRACE_MIN=10;
-const STAFF_LATE_FREE_LIMIT=570; // 09:30
-const STAFF_RELAX_LIMIT=600;     // 10:00
-const STAFF_RELAX_PERCENT=0.30;
 
-const toMinutes=t=>{const[a,b]=t.split(':').map(Number);return a*60+b};
-const loadData=()=>JSON.parse(localStorage.getItem(STORAGE_KEY)||'[]');
-const saveData=d=>localStorage.setItem(STORAGE_KEY,JSON.stringify(d));
-const getMonth=d=>d.slice(0,7);
 
-function getCounters(month){
- const rows=loadData().filter(r=>getMonth(r.date)===month);
- const staff=rows.filter(r=>r.emp==='staff');
- return{
-  grace:rows.filter(r=>r.flags.grace).length,
-  lateComp:rows.filter(r=>r.flags.lateComp).length,
-  nonComp:rows.filter(r=>r.status.startsWith('Non')).length,
-  special:rows.filter(r=>r.flags.special).length,
-  staffRelaxUsed:staff.filter(r=>r.flags.staffRelax).length,
-  staffRelaxAllowed: Math.floor(staff.filter(r=>!r.flags.special).length * STAFF_RELAX_PERCENT)
- };
+/* ============================================================
+   ================= RULE ENGINE SECTION =================
+   (Attendance logic ONLY. No UI manipulation here.)
+============================================================ */
+
+/* ================= STRICT VALIDATION TEST HARNESS =================
+   This section validates Faculty and Staff logic independently.
+   It does NOT touch UI or Table code.
+   Run manually using runAttendanceTests() from console.
+==================================================================== */
+
+function runAttendanceTests(){
+    const testMonth='2099-01';
+    localStorage.removeItem(STORAGE_KEY);
+
+    const facultyTests=[
+        {in:'09:00 AM',out:'05:30 PM',expect:'On-Time'},
+        {in:'09:05 AM',out:'05:30 PM',expect:'Grace'},
+        {in:'09:45 AM',out:'06:15 PM',expect:'Late Compensation'},
+        {in:'10:00 AM',out:'05:30 PM',expect:'Semimonthly Relaxation'},
+        {in:'10:45 AM',out:'05:30 PM',expect:'REJECT'}
+    ];
+
+    const staffTests=[
+        {in:'09:00 AM',out:'05:30 PM',expect:'On-Time'},
+        {in:'09:05 AM',out:'05:30 PM',expect:'Grace'},
+        {in:'09:20 AM',out:'06:00 PM',expect:'Late Compensation-Type I'},
+        {in:'09:45 AM',out:'06:30 PM',expect:'Late Compensation-Type II'},
+        {in:'10:30 AM',out:'05:30 PM',expect:'REJECT'}
+    ];
+
+    console.group('FACULTY VALIDATION');
+    facultyTests.forEach((t,i)=>{
+        const res=evaluateAttendance('faculty',t.in,t.out,testMonth+'-'+String(i+1).padStart(2,'0'),false,false);
+        console.log('Test',i+1,'Expected:',t.expect,'Got:',res.reason,res.reason===t.expect?'PASS':'FAIL');
+    });
+    console.groupEnd();
+
+    console.group('STAFF VALIDATION');
+    staffTests.forEach((t,i)=>{
+        const res=evaluateAttendance('staff',t.in,t.out,testMonth+'-'+String(i+1).padStart(2,'0'),false,false);
+        console.log('Test',i+1,'Expected:',t.expect,'Got:',res.reason,res.reason===t.expect?'PASS':'FAIL');
+    });
+    console.groupEnd();
 }
 
-function renderCounters(){
- const m=monthFilter.value;
- if(!m){counters.innerHTML='';return;}
- const c=getCounters(m);
- counters.innerHTML=
-  `<b>${m}</b><br>`+
-  `Grace: ${c.grace}<br>`+
-  `Late Comp: ${c.lateComp}<br>`+
-  `Non-Compliant: ${c.nonComp}<br>`+
-  `Special: ${c.special}<br>`+
-  `Staff Relax: ${c.staffRelaxUsed}/${c.staffRelaxAllowed}`;
+/* ================= END TEST HARNESS ================= */
+
+function toMinutes(t){if(!t)return 0;const d=new Date('1970-01-01 '+t);return d.getHours()*60+d.getMinutes();}
+
+/* ============================================================
+   ================= FACULTY ATTENDANCE RULES =================
+   Office Timing:
+   - Start : 09:00 AM (540)
+   - End   : 05:30 PM (1050)
+   - Early Relax Limit : 04:30 PM (990)
+
+   Rule Order (STRICT PRIORITY):
+   1. On-Time
+   2. Grace (09:01–09:10)
+   3. Semimonthly Relaxation (≤2 per month, controlled in recalculation)
+   4. Late Compensation (09:11–10:30 with ≥8.5 hrs)
+   5. Else → REJECT
+============================================================ */
+function evaluateFaculty(inMin,outMin,worked){
+
+    const OFFICE_START = 540;   // 09:00 AM
+    const OFFICE_END   = 1050;  // 05:30 PM
+    const EARLY_LIMIT  = 990;   // 04:30 PM
+    const FULL_DUTY    = 510;   // 8.5 hrs (in minutes)
+    const RELAX_DUTY   = 450;   // 7.5 hrs (in minutes)
+
+    /* ======================================================
+       Priority Order (STRICT)
+       1. On-Time
+       2. Grace
+       3. Late Compensation (full 8.5 hrs completion)
+       4. Semimonthly Relaxation (7.5–8.5 hrs window)
+       5. Else → REJECT
+    ======================================================= */
+
+    // 1️⃣ On-Time
+    if(inMin <= OFFICE_START && outMin >= OFFICE_END){
+        return {status:'Compliant',reason:'On-Time'};
+    }
+
+    // 2️⃣ Grace (09:01–09:10)
+    if(inMin > OFFICE_START && inMin <= 550 && outMin >= OFFICE_END){
+        return {status:'Compliant',reason:'Grace'};
+    }
+
+    // 3️⃣ Late Compensation (09:11–10:30 AND full 8.5 hrs duty)
+    // STRICT: must complete at least 8.5 hours (510 minutes)
+    if(inMin > 550 && inMin <= 630 && worked >= FULL_DUTY){
+        return {status:'Compliant',reason:'Late Compensation'};
+    }
+
+
+    // 4️⃣ Semimonthly Relaxation (≤2 per month handled separately)
+    // Either late up to 10:00 OR early leaving up to 04:30
+    // Duty must be between 7.5 hrs and less than 8.5 hrs
+    const lateRelax = (inMin > OFFICE_START && inMin <= 600 && outMin >= OFFICE_END);
+    const earlyRelax = (inMin <= OFFICE_START && outMin >= EARLY_LIMIT && outMin < OFFICE_END);
+
+    if((lateRelax || earlyRelax) && worked >= RELAX_DUTY && worked < FULL_DUTY){
+        return {status:'Compliant',reason:'Semimonthly Relaxation'};
+    }
+
+    // 5️⃣ Default
+    return {status:'Non-Compliant',reason:'REJECT'};
 }
 
-let editingDate=null;
+/* ============================================================
+   ================= STAFF ATTENDANCE RULES =================
+   Office Timing:
+   - Start : 09:00 AM (540)
+   - End   : 05:30 PM (1050)
+   - Early Relax Limit : 04:30 PM (990)
 
-function saveEntry(){
- const date=datePicker.value;
- const emp=empType.value;
- const inT=punchIn.value;
- let outT=punchOut.value;
- const isSpecial=specialLeave.value==='yes';
+   Rule Order (STRICT PRIORITY):
+   1. On-Time
+   2. Grace (09:01–09:10)
+   3. Semimonthly Relaxation (≤2 per month)
+   4. Late Compensation Type I  (09:11–09:30 ≥8.5 hrs)
+   5. Late Compensation Type II (09:31–10:00 ≥8.5 hrs, 30% cap handled in recalculation)
+   6. Else → REJECT
+============================================================ */
+function evaluateStaff(inMin,outMin,worked){
 
- if(!date){alert('Select date');return;}
- if(!isSpecial && !inT){alert('Enter punch-in');return;}
+    const OFFICE_START = 540;
+    const OFFICE_END   = 1050;
+    const EARLY_LIMIT  = 990;
+    const MIN_DUTY     = 510; // 8.5 hrs
 
- let flags={grace:false,lateComp:false,earlyLeave:false,special:false,autoOut:false,targetOut:null,staffRelax:false,reject:false};
+    // 1️⃣ On-Time
+    if(inMin <= OFFICE_START && outMin >= OFFICE_END){
+        return {status:'Compliant',reason:'On-Time'};
+    }
 
- if(isSpecial){
-  const newData=[...loadData().filter(r=>r.date!==date),{date,emp,inTime:'-',outTime:'-',hours:0,flags:{special:true},status:'Special Leave'}];
-  newData.sort((a,b)=>a.date.localeCompare(b.date));
-  saveData(newData);
-  render();
-  return;
- }
+    // 2️⃣ Grace
+    if(inMin > OFFICE_START && inMin <= 550 && outMin >= OFFICE_END){
+        return {status:'Compliant',reason:'Grace'};
+    }
 
- const hrs=parseFloat(dailyHours.value);
+    // 3️⃣ Semimonthly Relaxation (≤2 per month handled in recalculation)
+    if(
+        (inMin > OFFICE_START && inMin <= 600 && outMin >= OFFICE_END) ||
+        (inMin <= OFFICE_START && outMin >= EARLY_LIMIT && outMin < OFFICE_END)
+      ){
+        if(worked >= 450 && worked < MIN_DUTY){
+            return {status:'Compliant',reason:'Semimonthly Relaxation'};
+        }
+    }
 
- if(!outT){
-  const inMinTmp = toMinutes(inT);
-  let finalOutMin;
+    // 4️⃣ Late Compensation Type I (09:11–09:30)
+    if(inMin > 550 && inMin <= 570 && worked >= MIN_DUTY){
+        return {status:'Compliant',reason:'Late Compensation-Type I'};
+    }
 
-  // Grace case: 09:00–09:10 → punch-out allowed at 17:30
-  if(inMinTmp > PRESENCE_START && inMinTmp <= PRESENCE_START + GRACE_MIN){
-    finalOutMin = PRESENCE_END;
-    flags.grace = true;
-  } else {
-    finalOutMin = Math.max(inMinTmp + hrs*60, PRESENCE_END);
-  }
+    // 5️⃣ Late Compensation Type II (09:31–10:00)
+    if(inMin > 570 && inMin <= 600 && worked >= MIN_DUTY){
+        return {status:'Compliant',reason:'Late Compensation-Type II'};
+    }
 
-  outT = `${String(Math.floor(finalOutMin/60)%24).padStart(2,'0')}:${String(finalOutMin%60).padStart(2,'0')}`;
-  flags.autoOut = true;
-  flags.targetOut = outT;
- }
-
- const inMin=toMinutes(inT);
- const outMin=toMinutes(outT);
- const worked=(outMin-inMin)/60;
-
- let nonReason='';
-
- // Grace window detection (09:00–09:10)
- const isGraceWindow = (inMin > PRESENCE_START && inMin <= PRESENCE_START + GRACE_MIN);
- if(isGraceWindow){ flags.grace = true; }
-
- if(emp==='faculty' && inMin>630) nonReason='Faculty after 10:30';
-
- if(emp==='staff'){
-  const c=getCounters(getMonth(date));
-  if(inMin>STAFF_RELAX_LIMIT) nonReason='Staff after 10:00';
-  else if(inMin>STAFF_LATE_FREE_LIMIT){
-   if(c.staffRelaxUsed>=c.staffRelaxAllowed) nonReason='Staff relaxation exceeded';
-   else flags.staffRelax=true;
-  }
- }
-
- if(inMin>PRESENCE_END || outMin<PRESENCE_START) nonReason='Core hours violated';
- if(inMin<PRESENCE_START && outMin<PRESENCE_END) nonReason='Early coming does not permit early leaving';
- // Do not apply hours-short rule for grace window (09:00–09:10)
- if(!(flags.grace && isGraceWindow)){
-  if(worked<hrs) nonReason='Hours short';
- }
-
- let status='Compliant';
-
- if(nonReason){
-  status='Non-Compliant: '+nonReason;
-  flags.reject = true;
- } else if(inMin>PRESENCE_START){
-  const late=inMin-PRESENCE_START;
-  if(late<=GRACE_MIN){flags.grace=true;status='Compliant (Grace)';}
-  else{flags.lateComp=true;status='Compliant (Late Compensated)';}
- }
-
- const newData=[...loadData().filter(r=>r.date!==date),{date,emp,inTime:inT,outTime:outT,hours:Math.round(worked*100)/100,flags,status}];
- newData.sort((a,b)=>a.date.localeCompare(b.date));
- saveData(newData);
- render();
+    // 6️⃣ Default
+    return {status:'Non-Compliant',reason:'REJECT'};
 }
 
-function render(){
- const tb=document.querySelector('#logTable tbody');
- tb.innerHTML='';
- loadData()
-  .sort((a,b)=>a.date.localeCompare(b.date))
-  .filter(r=>!monthFilter.value||getMonth(r.date)===monthFilter.value)
-  .forEach(r=>{
-   const tr=document.createElement('tr');
-   tr.className=
-    r.flags.autoOut?'status-auto':
-    r.status.startsWith('Non')?'status-non':
-    r.status.includes('Late')?'status-late':
-    r.flags.special?'status-special':'status-full';
+function evaluateAttendance(emp,inTime,outTime,date,isHoliday,isSpecial){
+if(isHoliday) return {status:'Compliant',reason:'Closed Holiday'};
+if(isSpecial) return {status:'Compliant',reason:'Special Leave'};
 
-   const flagText=Object.keys(r.flags)
-    .filter(k=>r.flags[k] && k!=='targetOut')
-    .map(k=>{
-      if(k==='autoOut') return `Target Punch-Out: ${r.flags.targetOut}`;
-      if(k==='reject') return 'REJECT';
-      return k;
-    })
-    .join(', ') || '-';
+const inMin=toMinutes(inTime);
+const outMin=toMinutes(outTime);
+const worked=outMin-inMin;
 
-   tr.innerHTML=
-    `<td>${r.date}</td>`+
-    `<td>${r.emp}</td>`+
-    `<td>${r.inTime}</td>`+
-    `<td>${r.outTime}</td>`+
-    `<td>${flagText}</td>`+
-    `<td>${r.hours}</td>`+
-    `<td><button onclick=\"loadForEdit('${r.date}')\">Edit</button></td>`+
-    `<td><button onclick=\"deleteDay('${r.date}')\">Delete</button></td>`+
-    `<td>${r.status}</td>`;
+if(emp==='faculty') return evaluateFaculty(inMin,outMin,worked);
+if(emp==='staff') return evaluateStaff(inMin,outMin,worked);
 
-   tb.appendChild(tr);
-  });
- renderCounters();
+return {status:'Non-Compliant',reason:'REJECT'};
 }
 
-function loadForEdit(d){
- const r=loadData().find(x=>x.date===d);
- if(!r) return;
- editingDate=d;
- datePicker.value=r.date;
- empType.value=r.emp;
- punchIn.value=r.inTime==='-'?'':r.inTime;
- punchOut.value=r.outTime==='-'?'':r.outTime;
+/* ============================================================
+   ================= TABLE & DATA SECTION =================
+   (Rendering + Storage handling ONLY)
+============================================================ */
+
+function saveRecord(){
+const date=datePicker.value;
+const emp=empType.value;
+const empLabel=empType.selectedOptions[0].text;
+let inTime=punchIn.value;
+let outTime=punchOut.value;
+const isHoliday=closedHoliday.value==='yes';
+const isSpecial=specialLeave.value==='yes';
+
+if(!date){alert('Select Date');return;}
+
+let records=JSON.parse(localStorage.getItem(STORAGE_KEY)||'[]');
+
+// ===== Overwrite Logic =====
+const existingRecord = records.find(r=>r.date===date);
+
+// If editing mode is active → remove original record first
+if(editingDate){
+    records = records.filter(r=>r.date!==editingDate);
+
+    // If user changed date AND another record exists on that new date → confirm overwrite
+    if(editingDate!==date && existingRecord){
+        if(!confirm('Another record exists for this date. Overwrite?')){
+            // Restore original record if user cancels
+            records.push(existingRecord);
+            return;
+        }
+        records = records.filter(r=>r.date!==date);
+    }
+}
+// If not editing but record already exists → confirm overwrite
+else if(existingRecord){
+    if(!confirm('Record exists for this date. Overwrite?')) return;
+    records = records.filter(r=>r.date!==date);
 }
 
-function deleteDay(d){
- if(confirm('Delete '+d)){
-  const newData=loadData().filter(r=>r.date!==d);
-  saveData(newData);
-  render();
- }
+
+if(!isHoliday && !isSpecial && !inTime){
+alert('Punch-In Time is mandatory unless Closed Holiday or Special Leave is selected.');
+return;
 }
 
-function deleteMonth(){
- const m=monthFilter.value;
- if(m && confirm('Delete '+m)){
-  const newData=loadData().filter(r=>getMonth(r.date)!==m);
-  saveData(newData);
-  render();
- }
+if(!isHoliday && !isSpecial && inTime && !outTime){
+    // Auto-calculate target Punch-Out based on Required Daily Hours
+    const requiredHours = parseFloat(dailyHours.value || '8.5');
+    const inMin = toMinutes(inTime);
+    const targetOutMin = inMin + (requiredHours * 60);
+    const targetDate = new Date(1970,0,1,0,targetOutMin);
+    const targetOut = targetDate.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});
+
+    records.push({
+        date,
+        empLabel,
+        inTime,
+        outTime:targetOut,
+        hours:0,
+        status:'Non-Compliant',
+        reason:'Pending Punch-Out'
+    });
+    localStorage.setItem(STORAGE_KEY,JSON.stringify(records));
+    editingDate=null;
+    renderTable(false);
+    return;
 }
 
-function exportMonthly(){
- const rows=loadData();
- let csv='Date,Emp,In,Out,Flags,Hours,Status\n';
- rows.forEach(r=>{
-  const f=Object.keys(r.flags).filter(k=>r.flags[k]).join('|');
-  csv+=`${r.date},${r.emp},${r.inTime},${r.outTime},"${f}",${r.hours},${r.status}\n`;
- });
- const a=document.createElement('a');
- a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));
- a.download='attendance.csv';
- a.click();
+const result=evaluateAttendance(emp,inTime,outTime,date,isHoliday,isSpecial);
+const hours=isHoliday||isSpecial?0:((toMinutes(outTime)-toMinutes(inTime))/60).toFixed(2);
+records.push({date,empLabel,inTime,outTime,hours,status:result.status,reason:result.reason});
+localStorage.setItem(STORAGE_KEY,JSON.stringify(records));
+editingDate=null;
+recalculateMonth(date.slice(0,7));
+renderTable(false);
 }
 
-saveBtn.onclick=saveEntry;
-exportBtn.onclick=exportMonthly;
-deleteMonthBtn.onclick=deleteMonth;
-monthFilter.onchange=render;
-render();
+// ===== Recalculate Entire Month Chronologically =====
+function recalculateMonth(month){
+    let records=JSON.parse(localStorage.getItem(STORAGE_KEY)||'[]');
+    let monthRecords=records
+        .filter(r=>r.date.startsWith(month))
+        .sort((a,b)=>a.date.localeCompare(b.date));
+
+    let relaxCountFaculty=0;
+    let relaxCountStaff=0;
+
+    monthRecords.forEach(r=>{
+        if(r.reason==='Closed Holiday'||r.reason==='Special Leave'||r.reason==='Pending Punch-Out') return;
+
+        const emp=r.empLabel.toLowerCase();
+        const result=evaluateAttendance(emp,r.inTime,r.outTime,r.date,false,false);
+
+        // Chronological relaxation control
+        if(result.reason==='Semimonthly Relaxation'){
+            if(emp==='faculty'){
+                if(relaxCountFaculty<2){relaxCountFaculty++;}
+                else{r.status='Non-Compliant';r.reason='REJECT';return;}
+            }
+            if(emp==='staff'){
+                if(relaxCountStaff<2){relaxCountStaff++;}
+                else{r.status='Non-Compliant';r.reason='REJECT';return;}
+            }
+        }
+
+        r.status=result.status;
+        r.reason=result.reason;
+    });
+
+    // Merge back into full dataset
+    records=records.filter(r=>!r.date.startsWith(month)).concat(monthRecords);
+    records.sort((a,b)=>a.date.localeCompare(b.date));
+    localStorage.setItem(STORAGE_KEY,JSON.stringify(records));
+}
+
+function renderTable(showSummary=false){
+const month=monthFilter.value;
+const tbody=document.querySelector('#recordsTable tbody');
+let records=JSON.parse(localStorage.getItem(STORAGE_KEY)||'[]')
+    .sort((a,b)=>a.date.localeCompare(b.date)); // Always sort globally by date
+
+if(month) records=records.filter(r=>r.date.startsWith(month));
+else records=records.filter(r=>r.date.startsWith(new Date().toISOString().slice(0,7)));
+
+tbody.innerHTML='';
+records.forEach(r=>{
+const tr=document.createElement('tr');
+if(r.status==='Compliant') tr.className='status-compliant';
+if(r.status==='Non-Compliant') tr.className='status-noncompliant';
+if(r.reason==='Pending Punch-Out') tr.className='status-pending';
+if(r.reason==='Closed Holiday'||r.reason==='Special Leave') tr.className='status-neutral';
+tr.innerHTML='<td>'+r.date+'</td><td>'+r.empLabel+'</td><td>'+r.inTime+'</td><td>'+r.outTime+'</td><td>'+(r.hours||0)+'</td><td>'+r.status+'</td><td>'+r.reason+'</td><td><button onclick="editRecord(\''+r.date+'\')">Edit</button></td><td><button onclick="deleteRecord(\''+r.date+'\')" style="background:#c62828">Delete</button></td>';
+tbody.appendChild(tr);
+});
+
+if(showSummary && month){
+    renderMonthSummary(month);
+}else{
+    document.getElementById('monthSummary').style.display='none';
+}
+}
+
+function editRecord(date){
+const records=JSON.parse(localStorage.getItem(STORAGE_KEY)||'[]');
+const rec=records.find(r=>r.date===date);
+if(!rec)return;
+
+editingDate = date; // mark editing mode
+
+datePicker.value=rec.date;
+empType.value=rec.empLabel.toLowerCase();
+punchIn.value=rec.inTime||'';
+punchOut.value=rec.outTime||'';
+closedHoliday.value=rec.reason==='Closed Holiday'?'yes':'no';
+specialLeave.value=rec.reason==='Special Leave'?'yes':'no';
+}
+
+function deleteRecord(date){
+if(!confirm('Delete record for '+date+'?'))return;
+let records=JSON.parse(localStorage.getItem(STORAGE_KEY)||'[]');
+records=records.filter(r=>r.date!==date);
+localStorage.setItem(STORAGE_KEY,JSON.stringify(records));
+renderTable(false);
+}
+
+// ===== Month Summary Function =====
+function renderMonthSummary(month){
+    const emp = empType.value;
+    const allRecords = JSON.parse(localStorage.getItem(STORAGE_KEY)||'[]')
+        .filter(r => r.date.startsWith(month));
+
+    const records = allRecords.filter(r => r.empLabel.toLowerCase() === emp);
+
+    const total = records.length;
+    const compliant = records.filter(r => r.status === 'Compliant').length;
+    const noncompliant = records.filter(r => r.status === 'Non-Compliant').length;
+    const grace = records.filter(r => r.reason === 'Grace').length;
+    const relaxation = records.filter(r => r.reason === 'Semimonthly Relaxation').length;
+    const pending = records.filter(r => r.reason === 'Pending Punch-Out').length;
+    const holiday = records.filter(r => r.reason === 'Closed Holiday').length;
+    const special = records.filter(r => r.reason === 'Special Leave').length;
+    const reject = records.filter(r => r.reason === 'REJECT').length;
+
+    const lateCompFaculty = records.filter(r => r.reason === 'Late Compensation').length;
+    const lateCompTypeI = records.filter(r => r.reason === 'Late Compensation-Type I').length;
+    const lateCompTypeII = records.filter(r => r.reason === 'Late Compensation-Type II').length;
+
+    const summaryDiv = document.getElementById('monthSummary');
+
+    let html = '<button id="summaryClose">×</button>' +
+               '<b>' + month + '</b><br>' +
+               'Total Records: ' + total + '<br>' +
+               'Compliant: ' + compliant + '<br>' +
+               'Non-Compliant: ' + noncompliant + '<br>' +
+               'Grace: ' + grace + '<br>';
+
+    if(emp === 'faculty'){
+        html +=
+        'Relaxation: ' + relaxation + '/2<br>' +
+        'Late Compensation: ' + lateCompFaculty + '<br>' +
+        'Pending Punch-Out: ' + pending + '<br>' +
+        'Closed Holiday: ' + holiday + '<br>' +
+        'Special Leave: ' + special + '<br>' +
+        'Reject: ' + reject;
+    }
+    else{
+        const workingDays = records.filter(r => r.reason !== 'Closed Holiday' && r.reason !== 'Special Leave').length;
+        const ruleLimit = Math.floor(workingDays * 0.3);
+
+        html +=
+        'Relaxation Type I: ' + lateCompTypeI + '/2<br>' +
+        'Relaxation Type II: ' + lateCompTypeII + '/' + ruleLimit + '<br>' +
+        'Pending Punch-Out: ' + pending + '<br>' +
+        'Closed Holiday: ' + holiday + '<br>' +
+        'Special Leave: ' + special + '<br>' +
+        'Reject: ' + reject;
+    }
+
+    summaryDiv.innerHTML = html;
+    summaryDiv.style.display = 'block';
+    document.getElementById('summaryClose').onclick = function(){
+        summaryDiv.style.display = 'none';
+    };
+}
+
+/* ================= EVENT BINDINGS ================= */
+saveBtn.addEventListener('click',()=>renderTable(false));
+saveBtn.addEventListener('click',saveRecord);
+monthFilter.addEventListener('change',()=>{
+    if(monthFilter.value){
+        renderTable(true); // deliberate month selection
+    } else {
+        renderTable(false);
+    }
+});
+empType.addEventListener('change',()=>renderTable(false));
+
+renderTable();
 </script>
 </body>
 </html>
