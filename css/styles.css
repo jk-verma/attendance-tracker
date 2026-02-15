@@ -251,7 +251,9 @@ th {
 }
 
 .app-footer {
-    margin-top: 18px;
+    margin-top: 22px;
+    padding-top: 10px;
+    border-top: 1px solid #e3f2fd;
     text-align: center;
     color: #546e7a;
     font-size: 13px;
