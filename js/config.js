@@ -86,19 +86,19 @@ const REASON = {
     LATE_COMP_TYPE1: "Late Compensation—Type I",
     LATE_COMP_TYPE2: "Late Compensation—Type II",
     REJECT: "REJECT",
-    PENDING: "Pending Punch-Out",
+    MISSING: "Missing Punch-Out",
     CLOSED: "Closed Holiday",
     SPECIAL: "Special Leave"
 };
 
-function buildPendingOutReason(targetOutTime) {
-    if (!targetOutTime) return REASON.PENDING;
-    return `${REASON.PENDING} : ${targetOutTime}`;
+function buildMissingOutReason(targetOutTime) {
+    if (!targetOutTime) return REASON.MISSING;
+    return `${REASON.MISSING} : ${targetOutTime}`;
 }
 
-function isPendingOutReason(reason) {
+function isMissingOutReason(reason) {
     if (!reason) return false;
-    return reason === REASON.PENDING || reason.startsWith(`${REASON.PENDING} :`);
+    return reason === REASON.MISSING || reason.startsWith(`${REASON.MISSING} :`);
 }
 
 /* ============================================================
