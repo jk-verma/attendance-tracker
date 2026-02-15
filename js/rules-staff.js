@@ -33,12 +33,38 @@ function applyStaffRules(record, relaxationCount, type2Count, type2Limit) {
         return staffBuildResult(workedHours, STATUS.COMPLIANT, REASON.SEMI_RELAX, true);
     }
 
-    if (inMin > STAFF_CONFIG.GRACE_END && inMin <= STAFF_CONFIG.TYPE1_END && workedHours >= STAFF_CONFIG.MIN_FULL_HOURS) {
-        return staffBuildResult(workedHours, STATUS.COMPLIANT, REASON.LATE_COMP_TYPE1);
+    /* ------------------------------
+       4. LATE COMPENSATION TYPE I
+       09:11–09:30
+    -------------------------------- */
+    if (inMin > STAFF_CONFIG.GRACE_END &&
+        inMin <= STAFF_CONFIG.TYPE1_END &&
+        workedHours >= STAFF_CONFIG.MIN_FULL_HOURS) {
+
+        return buildResult(
+            workedHours,
+            "Compliant",
+            "Late Compensation—Type I"
+        );
     }
 
-    if (inMin > STAFF_CONFIG.TYPE1_END && inMin <= STAFF_CONFIG.TYPE2_END && workedHours >= STAFF_CONFIG.MIN_FULL_HOURS && type2Count < type2Limit) {
-        return staffBuildResult(workedHours, STATUS.COMPLIANT, REASON.LATE_COMP_TYPE2, false, true);
+    /* ------------------------------
+       5. LATE COMPENSATION TYPE II
+       09:31–10:00
+       WITH 30% CAP
+    -------------------------------- */
+    if (inMin > STAFF_CONFIG.TYPE1_END &&
+        inMin <= STAFF_CONFIG.TYPE2_END &&
+        workedHours >= STAFF_CONFIG.MIN_FULL_HOURS &&
+        type2Count < type2Limit) {
+
+        return buildResult(
+            workedHours,
+            "Compliant",
+            "Late Compensation—Type II",
+            false,
+            true
+        );
     }
 
     return staffBuildResult(workedHours, STATUS.NON_COMPLIANT, REASON.REJECT);

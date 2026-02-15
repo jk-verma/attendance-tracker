@@ -2,12 +2,99 @@
    UI MODULE
 ============================================================ */
 
-let uiInitialized = false;
-
 function initializeUI() {
 
-    if (uiInitialized) return;
-    uiInitialized = true;
+    const monthFilterEl = document.getElementById("monthFilter");
+    const dateEl = document.getElementById("datePicker");
+    const inEl = document.getElementById("punchIn");
+    const outEl = document.getElementById("punchOut");
+
+    if (typeof flatpickr === "function") {
+
+        flatpickr(monthFilterEl, {
+            plugins: [new monthSelectPlugin({ shorthand: true, dateFormat: "Y-m", altFormat: "F Y" })],
+            allowInput: true,
+            clickOpens: true,
+            disableMobile: true
+        });
+
+        flatpickr(dateEl, {
+            dateFormat: "Y-m-d",
+            defaultDate: new Date(),
+            allowInput: true,
+            clickOpens: true,
+            disableMobile: true
+        });
+
+        flatpickr(inEl, {
+            enableTime: true,
+            noCalendar: true,
+            dateFormat: "h:i K",
+            time_24hr: false,
+            defaultDate: "09:00 AM",
+            allowInput: true,
+            clickOpens: true,
+            disableMobile: true
+        });
+
+        flatpickr(outEl, {
+            enableTime: true,
+            noCalendar: true,
+            dateFormat: "h:i K",
+            time_24hr: false,
+            defaultDate: "05:30 PM",
+            allowInput: true,
+            clickOpens: true,
+            disableMobile: true
+        });
+    }
+}
+
+function handleSaveRecord(payload) {
+
+    if (!payload || !payload.date) {
+        alert("Please select date.");
+        return;
+    }
+
+    const empType = payload.empType || "faculty";
+    const record = {
+        date: payload.date,
+        empType,
+        empLabel: empType === "faculty" ? "Faculty" : "Staff",
+        inTime: payload.inTime || "",
+        outTime: payload.outTime || "",
+        hours: 0,
+        status: "",
+        reason: ""
+    };
+
+    const closedHoliday = document.getElementById("closedHoliday").value === "yes";
+    const specialLeave = document.getElementById("specialLeave").value === "yes";
+
+    if (closedHoliday) {
+        record.status = "Compliant";
+        record.reason = "Closed Holiday";
+    } else if (specialLeave) {
+        record.status = "Compliant";
+        record.reason = "Special Leave";
+    } else if (!record.outTime) {
+        record.status = "Non-Compliant";
+        record.reason = "Pending Punch-Out";
+    }
+
+    upsertRecord(record);
+
+    const reEvaluated = evaluateMonth(getAllRecords());
+    saveAllRecords(reEvaluated);
+
+    const month = (document.getElementById("monthFilter").value || "").trim();
+    if (month) {
+        renderSummary(month, empType);
+    }
+}
+
+document.addEventListener("DOMContentLoaded", function () {
 
     const empTypeEl = document.getElementById("empType");
     const monthFilterEl = document.getElementById("monthFilter");
@@ -16,58 +103,7 @@ function initializeUI() {
     const outEl = document.getElementById("punchOut");
     const saveBtn = document.getElementById("saveBtn");
 
-    initializePickers(monthFilterEl, dateEl, inEl, outEl);
-    bindCoreActions({ empTypeEl, monthFilterEl, dateEl, inEl, outEl, saveBtn });
-    bindImportExportDeleteActions({ monthFilterEl, empTypeEl });
-
-    closeSummary();
-}
-
-function initializePickers(monthFilterEl, dateEl, inEl, outEl) {
-
-    if (typeof flatpickr !== "function") return;
-
-    flatpickr(monthFilterEl, {
-        plugins: [new monthSelectPlugin({ shorthand: true, dateFormat: "Y-m", altFormat: "F Y" })],
-        allowInput: true,
-        clickOpens: true,
-        disableMobile: true
-    });
-
-    flatpickr(dateEl, {
-        dateFormat: "Y-m-d",
-        defaultDate: new Date(),
-        allowInput: true,
-        clickOpens: true,
-        disableMobile: true
-    });
-
-    flatpickr(inEl, {
-        enableTime: true,
-        noCalendar: true,
-        dateFormat: "h:i K",
-        time_24hr: false,
-        defaultDate: "09:00 AM",
-        allowInput: true,
-        clickOpens: true,
-        disableMobile: true
-    });
-
-    flatpickr(outEl, {
-        enableTime: true,
-        noCalendar: true,
-        dateFormat: "h:i K",
-        time_24hr: false,
-        defaultDate: "05:30 PM",
-        allowInput: true,
-        clickOpens: true,
-        disableMobile: true
-    });
-}
-
-function bindCoreActions(ctx) {
-
-    const { empTypeEl, monthFilterEl, dateEl, inEl, outEl, saveBtn } = ctx;
+    initializeUI();
 
     saveBtn.addEventListener("click", function () {
 
@@ -79,14 +115,13 @@ function bindCoreActions(ctx) {
         };
 
         handleSaveRecord(payload);
-        refreshAfterDataMutation(monthFilterEl, empTypeEl);
+        renderTable();
     });
 
     monthFilterEl.addEventListener("change", function () {
-        renderTable();
-
         if (!monthFilterEl.value) {
             closeSummary();
+            renderTable();
             return;
         }
 
@@ -95,7 +130,6 @@ function bindCoreActions(ctx) {
 
     empTypeEl.addEventListener("change", function () {
         renderTable();
-
         if (monthFilterEl.value) {
             renderSummary(monthFilterEl.value, empTypeEl.value);
         }
@@ -107,32 +141,6 @@ function bindCoreActions(ctx) {
 
     outEl.addEventListener("focus", function () {
         if (!outEl.value && outEl._flatpickr) outEl._flatpickr.setDate("05:30 PM", false);
-    });
-}
-
-function bindImportExportDeleteActions(ctx) {
-
-    const { monthFilterEl, empTypeEl } = ctx;
-
-    const importBtn = document.getElementById("importBtn");
-    const exportBtn = document.getElementById("exportBtn");
-    const deleteBtn = document.getElementById("deleteBtn");
-
-    const importMenu = document.getElementById("importMenu");
-    const exportMenu = document.getElementById("exportMenu");
-    const deleteMenu = document.getElementById("deleteMenu");
-
-    const importFile = document.getElementById("importFile");
-    const qrImageFile = document.getElementById("qrImageFile");
-
-    importBtn.addEventListener("click", event => {
-        event.stopPropagation();
-        toggleMenu(importMenu);
-    });
-
-    exportBtn.addEventListener("click", event => {
-        event.stopPropagation();
-        toggleMenu(exportMenu);
     });
 
     deleteBtn.addEventListener("click", event => {

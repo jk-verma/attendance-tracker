@@ -2,6 +2,8 @@
    IMPORT / EXPORT MODULE
 ============================================================ */
 
+/* ================= CSV EXPORT ================= */
+
 function exportCSV(records, filename = "attendance_export.csv") {
 
     let csv = "Date,Emp,In,Out,Hours,Status,Reason\n";
