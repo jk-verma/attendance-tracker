@@ -279,7 +279,6 @@ function handleSaveRecord(payload) {
 
     const empType = payload.empType || "faculty";
     const inTime = payload.inTime || "";
-    const hasManualInTime = Boolean(inTime);
     const hasManualOutTime = Boolean(payload.outTime);
     const computedOutTime = hasManualOutTime
         ? payload.outTime
@@ -306,10 +305,6 @@ function handleSaveRecord(payload) {
     } else if (specialLeave) {
         record.status = STATUS.COMPLIANT;
         record.reason = REASON.SPECIAL;
-    } else if (!hasManualInTime) {
-        record.status = STATUS.NON_COMPLIANT;
-        record.reason = REASON.PENDING_IN;
-        record.hours = 0;
     } else if (!hasManualOutTime) {
         record.status = STATUS.NON_COMPLIANT;
         record.reason = buildPendingOutReason(record.outTime);
