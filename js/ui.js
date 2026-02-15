@@ -167,13 +167,12 @@ function bindImportExportDeleteActions(ctx) {
             importFile.click();
         }
 
-        if (type === "qr") {
-            const useScanner = confirm("OK: Scan QR with camera\nCancel: Upload QR image file");
-            if (useScanner) {
-                importQRFromScanner(() => refreshAfterDataMutation(monthFilterEl, empTypeEl));
-            } else {
-                qrImageFile.click();
-            }
+        if (type === "qr-scan") {
+            importQRFromScanner(() => refreshAfterDataMutation(monthFilterEl, empTypeEl));
+        }
+
+        if (type === "qr-upload") {
+            qrImageFile.click();
         }
 
         closeAllMenus();
