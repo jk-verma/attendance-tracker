@@ -56,14 +56,21 @@ function evaluateMonth(records) {
 
             if (record.isAutoPunchOutPending) {
                 record.status = STATUS.NON_COMPLIANT;
-                record.reason = REASON.PENDING;
+                record.reason = buildPendingOutReason(record.outTime);
                 record.hours = calculateHours(timeToMinutes(record.inTime), timeToMinutes(record.outTime));
+                return;
+            }
+
+            if (!record.inTime) {
+                record.status = STATUS.NON_COMPLIANT;
+                record.reason = REASON.PENDING_IN;
+                record.hours = 0;
                 return;
             }
 
             if (!record.outTime) {
                 record.status = STATUS.NON_COMPLIANT;
-                record.reason = REASON.PENDING;
+                record.reason = REASON.PENDING_OUT;
                 record.hours = 0;
                 return;
             }
