@@ -1,42 +1,34 @@
 <!DOCTYPE html>
+<!-- =============================================================
+     Attendance Punch In / Punch Out Tracker
+     Version: v1.0 Stable (Modular Architecture)
+     NOTE: This file is ONLY a skeleton loader.
+     All logic is segregated into dedicated JS modules.
+============================================================= -->
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Attendance Punch In / Punch Out Tracker</title>
 
+<!-- ================= CSS ================= -->
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/plugins/monthSelect/style.css">
+<link rel="stylesheet" href="css/styles.css">
 
-<style>
-body{font-family:Segoe UI,Tahoma,sans-serif;background:linear-gradient(#e3f2fd,#fff);margin:0;padding:20px}
-.container{max-width:1050px;margin:auto;background:#fff;border-radius:12px;box-shadow:0 6px 12px rgba(0,0,0,.15);padding:20px}
-h2{text-align:center;color:#0d47a1}
-.row{display:grid;grid-template-columns:260px 1fr;gap:10px;margin-bottom:12px;align-items:center}
-input,select,button{height:40px;font-size:14px;width:100%;box-sizing:border-box;padding:0 10px;border-radius:6px;border:1px solid #ccc}
-button{background:#1976d2;color:#fff;border:none;cursor:pointer}
-button:hover{background:#1565c0}
-.table-wrap{overflow-x:auto;margin-top:20px}
-table{border-collapse:collapse;width:100%}
-th,td{border:1px solid #ccc;padding:8px;text-align:center;font-size:13px}
-th{background:#e3f2fd}
-.status-compliant{background:#e8f5e9}
-.status-noncompliant{background:#ffebee}
-.status-neutral{background:#eceff1}
-.status-pending{background:#ffeb3b}
-#monthSummary{background:#e3f2fd;padding:12px 40px 12px 12px;border-radius:8px;margin-bottom:15px;font-size:14px;display:none;position:relative}
-#summaryClose{position:absolute;top:8px;right:10px;background:#1976d2;color:#fff;border:none;border-radius:50%;width:22px;height:22px;font-size:12px;cursor:pointer}
-.action-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:15px;margin-top:15px}
-.dropdown{position:relative}
-.dropdown-menu{display:none;position:absolute;width:100%;background:#fff;border:1px solid #ccc;z-index:10}
-.dropdown-menu div{padding:8px;cursor:pointer}
-.dropdown-menu div:hover{background:#f1f1f1}
-</style>
+<!-- ================= External Libraries ================= -->
+<script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/minified/html5-qrcode.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/plugins/monthSelect/index.js"></script>
+
 </head>
 <body>
+
 <div class="container">
 <h2>Monthly Attendance Punch Tracker</h2>
 
+<!-- ================= UI SECTION ================= -->
 <div class="row">
 <label>Employee Type</label>
 <select id="empType">
@@ -50,7 +42,7 @@ th{background:#e3f2fd}
 <input type="text" id="monthFilter">
 </div>
 
-<div id="monthSummary"><button id="summaryClose">×</button></div>
+<div id="summaryPanel"></div>
 
 <div class="row">
 <label>Date</label>
@@ -69,11 +61,8 @@ th{background:#e3f2fd}
 
 <div class="row">
 <label>Required Daily Hours</label>
-<select id="dailyHours">
+<select id="requiredHours">
 <option value="8.5">8h 30m (8.5 Hours - Standard Duty)</option>
-<option value="8">8h 00m</option>
-<option value="7.5">7h 30m</option>
-<option value="7">7h 00m</option>
 </select>
 </div>
 
@@ -95,6 +84,7 @@ th{background:#e3f2fd}
 
 <button id="saveBtn">Save Punch</button>
 
+<!-- ================= TABLE SECTION ================= -->
 <div class="table-wrap">
 <table id="recordsTable">
 <thead>
@@ -114,313 +104,73 @@ th{background:#e3f2fd}
 </table>
 </div>
 
+<!-- ================= ACTION BUTTONS ================= -->
+<div class="action-row">
+
+<div class="dropdown">
+<button id="importBtn">Import Report</button>
+<div class="dropdown-menu" id="importMenu">
+<div data-type="qr">QR Code</div>
+<div data-type="csv">CSV File</div>
+</div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
-<script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/plugins/monthSelect/index.js"></script>
+<div class="dropdown">
+<button id="exportBtn">Export Report</button>
+<div class="dropdown-menu" id="exportMenu">
+<div data-type="qr-month">QR Code – Filter Month</div>
+<div data-type="qr-all">QR Code – Entire Records</div>
+<div data-type="csv-month">CSV File – Filter Month</div>
+<div data-type="csv-all">CSV File – Entire Records</div>
+</div>
+</div>
 
-<script>
-const STORAGE_KEY='attendance_records_v18';
-let editingDate=null;
+<div class="dropdown">
+<button id="deleteBtn">Delete Records</button>
+<div class="dropdown-menu" id="deleteMenu">
+<div data-type="month">Filter Month Records</div>
+<div data-type="all">Entire Records</div>
+</div>
+</div>
 
-flatpickr('#monthFilter',{plugins:[new monthSelectPlugin({dateFormat:'Y-m'})]});
-flatpickr('#datePicker',{dateFormat:'Y-m-d',defaultDate:new Date()});
-flatpickr('#punchIn',{enableTime:true,noCalendar:true,dateFormat:'h:i K',defaultHour:9,defaultMinute:0,allowInput:true});
-flatpickr('#punchOut',{enableTime:true,noCalendar:true,dateFormat:'h:i K',defaultHour:17,defaultMinute:30,allowInput:true});
+<input type="file" id="importFile" accept=".csv" style="display:none">
 
-function toMinutes(t){if(!t)return 0;const d=new Date('1970-01-01 '+t);return d.getHours()*60+d.getMinutes();}
+</div>
 
-/* ================= FACULTY RULE ENGINE ================= */
-function evaluateFaculty(inMin,outMin,worked){
-const OFFICE_START=540,OFFICE_END=1050,EARLY_LIMIT=990,FULL_DUTY=510,RELAX_DUTY=450;
-if(inMin<=OFFICE_START && outMin>=OFFICE_END)
-    return {status:'Compliant',reason:'On-Time'};
-if(inMin>OFFICE_START && inMin<=550 && outMin>=OFFICE_END)
-    return {status:'Compliant',reason:'Grace'};
-if(inMin>550 && inMin<=630 && worked>=FULL_DUTY)
-    return {status:'Compliant',reason:'Late Compensation'};
-const lateRelax=(inMin>OFFICE_START && inMin<=600 && outMin>=OFFICE_END);
-const earlyRelax=(inMin<=OFFICE_START && outMin>=EARLY_LIMIT && outMin<OFFICE_END);
-if((lateRelax||earlyRelax) && worked>=RELAX_DUTY && worked<FULL_DUTY)
-    return {status:'Compliant',reason:'Semimonthly Relaxation'};
-return {status:'Non-Compliant',reason:'REJECT'};
-}
+<div id="qrContainer"></div>
+<div id="qrReader"></div>
 
-/* ================= STAFF RULE ENGINE ================= */
-function evaluateStaff(inMin,outMin,worked){
-const OFFICE_START=540,OFFICE_END=1050,EARLY_LIMIT=990,MIN_DUTY=510;
-if(inMin<=OFFICE_START && outMin>=OFFICE_END)
-    return {status:'Compliant',reason:'On-Time'};
-if(inMin>OFFICE_START && inMin<=550 && outMin>=OFFICE_END)
-    return {status:'Compliant',reason:'Grace'};
-if(inMin>550 && inMin<=570 && worked>=MIN_DUTY)
-    return {status:'Compliant',reason:'Late Compensation-Type I'};
-if(inMin>570 && inMin<=600 && worked>=MIN_DUTY)
-    return {status:'Compliant',reason:'Late Compensation-Type II'};
-const lateRelax=(inMin>OFFICE_START && inMin<=600 && outMin>=OFFICE_END);
-const earlyRelax=(inMin<=OFFICE_START && outMin>=EARLY_LIMIT && outMin<OFFICE_END);
-if((lateRelax||earlyRelax) && worked>=450 && worked<MIN_DUTY)
-    return {status:'Compliant',reason:'Semimonthly Relaxation'};
-return {status:'Non-Compliant',reason:'REJECT'};
-}
+</div>
 
-function evaluateAttendance(emp,inTime,outTime,isHoliday,isSpecial){
-if(isHoliday) return {status:'Compliant',reason:'Closed Holiday'};
-if(isSpecial) return {status:'Compliant',reason:'Special Leave'};
-const inMin=toMinutes(inTime);
-const outMin=toMinutes(outTime);
-const worked=outMin-inMin;
-if(emp==='faculty') return evaluateFaculty(inMin,outMin,worked);
-if(emp==='staff') return evaluateStaff(inMin,outMin,worked);
-return {status:'Non-Compliant',reason:'REJECT'};
-}
+<!-- ================= APPLICATION MODULES ================= -->
 
-/* ============= CHRONOLOGICAL MONTH RECALCULATION ============= */
-function recalcMonth(month){
-let records=JSON.parse(localStorage.getItem(STORAGE_KEY)||'[]');
-let monthRecords=records.filter(r=>r.date.startsWith(month)).sort((a,b)=>a.date.localeCompare(b.date));
+<!-- Config & Constants -->
+<script src="js/config.js"></script>
 
-// compute working days Mon-Fri
-const year=parseInt(month.slice(0,4));
-const mon=parseInt(month.slice(5,7))-1;
-const daysInMonth=new Date(year,mon+1,0).getDate();
-let workingDays=0;
-for(let d=1; d<=daysInMonth; d++){
-    const day=new Date(year,mon,d).getDay();
-    if(day!==0 && day!==6) workingDays++;
-}
+<!-- Storage Layer -->
+<script src="js/storage.js"></script>
 
-const closedCount=monthRecords.filter(r=>r.reason==='Closed Holiday').length;
-const typeIILimit=Math.floor((workingDays-closedCount)*0.30);
+<!-- Attendance Rule Engines -->
+<script src="js/rules-faculty.js"></script>
+<script src="js/rules-staff.js"></script>
 
-let typeIICount=0;
-let relaxCountFaculty=0;
-let relaxCountStaff=0;
+<!-- Monthly Recalculation Engine -->
+<script src="js/monthly-recalc.js"></script>
 
-monthRecords.forEach(r=>{
-    if(r.reason==='Closed Holiday'||r.reason==='Special Leave'||r.reason==='Pending Punch-Out') return;
+<!-- Summary Module -->
+<script src="js/summary.js"></script>
 
-    const inMin=toMinutes(r.inTime);
-    const outMin=toMinutes(r.outTime);
-    const worked=outMin-inMin;
+<!-- Table Renderer -->
+<script src="js/table.js"></script>
 
-    const result=evaluateAttendance(r.empLabel.toLowerCase(),r.inTime,r.outTime,false,false);
+<!-- Import / Export (QR + CSV) -->
+<script src="js/import-export.js"></script>
 
-    // Faculty relaxation cap
-    if(r.empLabel==='Faculty' && result.reason==='Semimonthly Relaxation'){
-        if(relaxCountFaculty<2) relaxCountFaculty++;
-        else {r.status='Non-Compliant';r.reason='REJECT';return;}
-    }
+<!-- UI Controller (Event Bindings Only) -->
+<script src="js/ui.js"></script>
 
-    // Staff relaxation cap
-    if(r.empLabel==='Staff' && result.reason==='Semimonthly Relaxation'){
-        if(relaxCountStaff<2) relaxCountStaff++;
-        else {r.status='Non-Compliant';r.reason='REJECT';return;}
-    }
+<!-- App Bootstrapper -->
+<script src="js/app.js"></script>
 
-    // Staff 30% cap
-    if(r.empLabel==='Staff' && result.reason==='Late Compensation-Type II'){
-        if(typeIICount<typeIILimit) typeIICount++;
-        else {r.status='Non-Compliant';r.reason='REJECT (30% Rule Exceeded)';return;}
-    }
-
-    r.status=result.status;
-    r.reason=result.reason;
-});
-
-records=records.filter(r=>!r.date.startsWith(month)).concat(monthRecords);
-records.sort((a,b)=>a.date.localeCompare(b.date));
-localStorage.setItem(STORAGE_KEY,JSON.stringify(records));
-}
-
-/* ================= SAVE RECORD ================= */
-function saveRecord(){
-const date=datePicker.value;
-const emp=empType.value;
-const empLabel=empType.selectedOptions[0].text;
-const inTime=punchIn.value;
-let outTime=punchOut.value;
-const isHoliday=closedHoliday.value==='yes';
-const isSpecial=specialLeave.value==='yes';
-
-if(!date){alert('Select Date');return;}
-if(!isHoliday && !isSpecial && !inTime){alert('Punch-In required');return;}
-
-let records=JSON.parse(localStorage.getItem(STORAGE_KEY)||'[]');
-
-// ===== Enforce SINGLE ENTRY PER DATE =====
-// Check if record already exists for this date
-const existingRecord = records.find(r=>r.date===date);
-
-if(existingRecord){
-    const confirmOverwrite = confirm('Record already exists for '+date+'. Do you want to overwrite it?');
-    if(!confirmOverwrite){
-        return; // Stop save operation
-    }
-    // Remove existing record before overwriting
-    records = records.filter(r=>r.date!==date);
-}
-
-if(!isHoliday && !isSpecial && inTime && !outTime){
-    const requiredHours=parseFloat(dailyHours.value||'8.5');
-    const targetOutMin=toMinutes(inTime)+(requiredHours*60);
-    const targetDate=new Date(1970,0,1,0,targetOutMin);
-    outTime=targetDate.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});
-
-    records.push({
-        date,
-        empLabel,
-        inTime,
-        outTime,
-        hours:0,
-        status:'Non-Compliant',
-        reason:'Pending Punch-Out'
-    });
-
-    localStorage.setItem(STORAGE_KEY,JSON.stringify(records));
-    recalcMonth(date.slice(0,7));
-    renderTable();
-    editingDate=null;
-    return;
-}
-
-const result=evaluateAttendance(emp,inTime,outTime,isHoliday,isSpecial);
-const hours=isHoliday||isSpecial?0:((toMinutes(outTime)-toMinutes(inTime))/60).toFixed(2);
-
-records.push({
-    date,
-    empLabel,
-    inTime,
-    outTime,
-    hours,
-    status:result.status,
-    reason:result.reason
-});
-
-localStorage.setItem(STORAGE_KEY,JSON.stringify(records));
-recalcMonth(date.slice(0,7));
-renderTable();
-// Do NOT auto-open summary after save
-monthSummary.style.display='none';
-editingDate=null;
-}
-
-/* ================= SUMMARY ================= */
-function renderSummary(){
-const month=monthFilter.value;
-if(!month){ monthSummary.style.display='none'; return; }
-
-const emp=empType.selectedOptions[0].text;
-const records=JSON.parse(localStorage.getItem(STORAGE_KEY)||'[]')
-.filter(r=>r.date.startsWith(month)&&r.empLabel===emp);
-
-let compliant=records.filter(r=>r.status==='Compliant').length;
-let non=records.filter(r=>r.status==='Non-Compliant').length;
-let grace=records.filter(r=>r.reason==='Grace').length;
-let relax=records.filter(r=>r.reason==='Semimonthly Relaxation').length;
-let pending=records.filter(r=>r.reason==='Pending Punch-Out').length;
-let closed=records.filter(r=>r.reason==='Closed Holiday').length;
-let special=records.filter(r=>r.reason==='Special Leave').length;
-
-monthSummary.style.display='block';
-
-if(emp==='Faculty'){
-    const lateComp=records.filter(r=>r.reason==='Late Compensation').length;
-    monthSummary.innerHTML='<button id="summaryClose">×</button>'+
-    '<b>'+month+' - Faculty</b><br>'+
-    'Total Records: '+records.length+'<br>'+
-    'Compliant: '+compliant+'<br>'+
-    'Non-Compliant: '+non+'<br>'+
-    'Grace: '+grace+'<br>'+
-    'Relaxation: '+relax+'/2<br>'+
-    'Late Compensation: '+lateComp+'<br>'+
-    'Pending Punch-Out: '+pending+'<br>'+
-    'Closed Holiday: '+closed+'<br>'+
-    'Special Leave: '+special;
-}
-
-if(emp==='Staff'){
-    const typeI=records.filter(r=>r.reason==='Late Compensation-Type I').length;
-    const typeII=records.filter(r=>r.reason==='Late Compensation-Type II').length;
-
-    const year=parseInt(month.slice(0,4));
-    const mon=parseInt(month.slice(5,7))-1;
-    const daysInMonth=new Date(year,mon+1,0).getDate();
-    let workingDays=0;
-    for(let d=1; d<=daysInMonth; d++){
-        const day=new Date(year,mon,d).getDay();
-        if(day!==0 && day!==6) workingDays++;
-    }
-    const effective=workingDays-closed;
-    const limit=Math.floor(effective*0.30);
-
-    monthSummary.innerHTML='<button id="summaryClose">×</button>'+
-    '<b>'+month+' - Staff</b><br>'+
-    'Total Records: '+records.length+'<br>'+
-    'Compliant: '+compliant+'<br>'+
-    'Non-Compliant: '+non+'<br>'+
-    'Grace: '+grace+'<br>'+
-    'Relaxation: '+relax+'/2<br>'+
-    'Late Compensation Type I: '+typeI+'<br>'+
-    'Late Compensation Type II: '+typeII+'/'+limit+'<br>'+
-    'Pending Punch-Out: '+pending+'<br>'+
-    'Closed Holiday: '+closed+'<br>'+
-    'Special Leave: '+special;
-}
-
-
-document.getElementById('summaryClose').onclick=function(){
-    monthSummary.style.display='none';
-};
-}
-
-/* ================= TABLE RENDER ================= */
-function renderTable(){
-const month=monthFilter.value;
-const tbody=document.querySelector('#recordsTable tbody');
-let records=JSON.parse(localStorage.getItem(STORAGE_KEY)||'[]').sort((a,b)=>a.date.localeCompare(b.date));
-if(month) records=records.filter(r=>r.date.startsWith(month));
-tbody.innerHTML='';
-records.forEach(r=>{
-const tr=document.createElement('tr');
-if(r.reason==='Pending Punch-Out') tr.className='status-pending';
-else if(r.reason==='Closed Holiday'||r.reason==='Special Leave') tr.className='status-neutral';
-else if(r.status==='Compliant') tr.className='status-compliant';
-else tr.className='status-noncompliant';
-tr.innerHTML='<td>'+r.date+'</td><td>'+r.empLabel+'</td><td>'+r.inTime+'</td><td>'+r.outTime+'</td><td>'+r.hours+'</td><td>'+r.status+'</td><td>'+r.reason+'</td><td><button onclick="editRecord(\''+r.date+'\')">Edit</button></td><td><button onclick="deleteRecord(\''+r.date+'\')" style="background:#c62828">Delete</button></td>';
-tbody.appendChild(tr);
-});
-// Do NOT auto-open summary here. Summary will open only when month is deliberately selected.
-}
-
-function editRecord(date){
-const records=JSON.parse(localStorage.getItem(STORAGE_KEY)||'[]');
-const rec=records.find(r=>r.date===date);
-if(!rec)return;
-editingDate=date;
-datePicker.value=rec.date;
-empType.value=rec.empLabel.toLowerCase();
-punchIn.value=rec.inTime||'';
-punchOut.value=rec.outTime||'';
-closedHoliday.value=rec.reason==='Closed Holiday'?'yes':'no';
-specialLeave.value=rec.reason==='Special Leave'?'yes':'no';
-}
-
-function deleteRecord(date){
-if(!confirm('Delete record for '+date+'?'))return;
-let records=JSON.parse(localStorage.getItem(STORAGE_KEY)||'[]');
-records=records.filter(r=>r.date!==date);
-localStorage.setItem(STORAGE_KEY,JSON.stringify(records));
-renderTable();
-}
-
-saveBtn.addEventListener('click',saveRecord);
-monthFilter.addEventListener('change',function(){
-    renderTable();
-    renderSummary(); // Open summary ONLY when month picker is used
-});
-empType.addEventListener('change',renderTable);
-renderTable();
-</script>
 </body>
 </html>
