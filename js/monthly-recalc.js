@@ -61,16 +61,9 @@ function evaluateMonth(records) {
                 return;
             }
 
-            if (!record.inTime) {
-                record.status = STATUS.NON_COMPLIANT;
-                record.reason = REASON.PENDING_IN;
-                record.hours = 0;
-                return;
-            }
-
             if (!record.outTime) {
                 record.status = STATUS.NON_COMPLIANT;
-                record.reason = REASON.PENDING_OUT;
+                record.reason = REASON.PENDING;
                 record.hours = 0;
                 return;
             }
