@@ -54,16 +54,16 @@ function evaluateMonth(records) {
                 return;
             }
 
-            if (record.isAutoPunchOutMissing) {
+            if (record.isAutoPunchOutPending) {
                 record.status = STATUS.NON_COMPLIANT;
-                record.reason = buildMissingOutReason(record.outTime);
+                record.reason = buildPendingOutReason(record.outTime);
                 record.hours = calculateHours(timeToMinutes(record.inTime), timeToMinutes(record.outTime));
                 return;
             }
 
             if (!record.outTime) {
                 record.status = STATUS.NON_COMPLIANT;
-                record.reason = REASON.MISSING;
+                record.reason = REASON.PENDING;
                 record.hours = 0;
                 return;
             }
