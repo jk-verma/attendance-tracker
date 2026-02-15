@@ -151,7 +151,7 @@ function bindImportExportDeleteActions(ctx) {
         if (type === "qr") {
             const useScanner = confirm("OK: Scan QR with camera\nCancel: Upload QR image file");
             if (useScanner) {
-                importQRFromScanner();
+                importQRFromScanner(() => refreshAfterDataMutation(monthFilterEl, empTypeEl));
             } else {
                 qrImageFile.click();
             }
@@ -164,21 +164,20 @@ function bindImportExportDeleteActions(ctx) {
         const file = importFile.files && importFile.files[0];
         if (!file) return;
 
-        importCSV(file);
+        importCSV(file, () => {
+            refreshAfterDataMutation(monthFilterEl, empTypeEl);
+        });
         importFile.value = "";
-
-        refreshAfterDataMutation(monthFilterEl, empTypeEl);
     });
 
     qrImageFile.addEventListener("change", function () {
         const file = qrImageFile.files && qrImageFile.files[0];
         if (!file) return;
 
-        importQRFromFile(file);
+        importQRFromFile(file, () => {
+            refreshAfterDataMutation(monthFilterEl, empTypeEl);
+        });
         qrImageFile.value = "";
-
-        // importQRFromFile is async; refresh shortly after decode processing
-        setTimeout(() => refreshAfterDataMutation(monthFilterEl, empTypeEl), 400);
     });
 
     exportMenu.addEventListener("click", function (event) {

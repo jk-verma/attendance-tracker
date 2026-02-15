@@ -17,7 +17,7 @@ function exportCSV(records, filename = "attendance_export.csv") {
     link.click();
 }
 
-function importCSV(file) {
+function importCSV(file, onComplete) {
 
     const reader = new FileReader();
 
@@ -27,6 +27,7 @@ function importCSV(file) {
 
         if (!lines.length || !lines[0].includes("Date")) {
             alert("Invalid CSV Format");
+            if (typeof onComplete === "function") onComplete(false);
             return;
         }
 
@@ -56,6 +57,12 @@ function importCSV(file) {
 
         if (typeof renderTable === "function") renderTable();
         alert("CSV Imported & Recalculated Successfully");
+        if (typeof onComplete === "function") onComplete(true);
+    };
+
+    reader.onerror = function () {
+        alert("Failed to read CSV file");
+        if (typeof onComplete === "function") onComplete(false);
     };
 
     reader.readAsText(file);
@@ -72,30 +79,36 @@ function exportQR(records) {
     });
 }
 
-function importQRFromScanner() {
+function importQRFromScanner(onComplete) {
 
     const readerContainer = document.getElementById("qrReader");
     readerContainer.innerHTML = "";
 
     if (typeof Html5QrcodeScanner === "undefined") {
         alert("QR Scanner Library Missing");
+        if (typeof onComplete === "function") onComplete(false);
         return;
     }
 
     const scanner = new Html5QrcodeScanner("qrReader", { fps: 10, qrbox: 250 });
 
     scanner.render(function (decodedText) {
-        processQrPayload(decodedText, "QR Imported & Recalculated");
+        const ok = processQrPayload(decodedText, "QR Imported & Recalculated");
         scanner.clear();
+        if (typeof onComplete === "function") onComplete(ok);
     });
 }
 
-function importQRFromFile(file) {
+function importQRFromFile(file, onComplete) {
 
-    if (!file) return;
+    if (!file) {
+        if (typeof onComplete === "function") onComplete(false);
+        return;
+    }
 
     if (typeof Html5Qrcode === "undefined") {
         alert("QR Scanner Library Missing");
+        if (typeof onComplete === "function") onComplete(false);
         return;
     }
 
@@ -106,11 +119,13 @@ function importQRFromFile(file) {
 
     html5QrCode.scanFile(file, true)
         .then(decodedText => {
-            processQrPayload(decodedText, "QR File Imported & Recalculated");
+            const ok = processQrPayload(decodedText, "QR File Imported & Recalculated");
             html5QrCode.clear();
+            if (typeof onComplete === "function") onComplete(ok);
         })
         .catch(() => {
             alert("Unable to read QR from selected image.");
+            if (typeof onComplete === "function") onComplete(false);
         });
 }
 
@@ -121,7 +136,7 @@ function processQrPayload(decodedText, successMessage) {
 
         if (!Array.isArray(parsed)) {
             alert("Invalid QR Data");
-            return;
+            return false;
         }
 
         const evaluated = evaluateMonth(parsed);
@@ -129,8 +144,10 @@ function processQrPayload(decodedText, successMessage) {
 
         if (typeof renderTable === "function") renderTable();
         alert(successMessage);
+        return true;
 
     } catch (e) {
         alert("Invalid QR Data");
+        return false;
     }
 }
