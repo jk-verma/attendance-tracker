@@ -21,7 +21,7 @@ function renderTable() {
 
         const tr = document.createElement("tr");
 
-        if (record.reason === REASON.PENDING) {
+        if (record.reason === REASON.PENDING_IN || isPendingOutReason(record.reason)) {
             tr.className = "status-pending";
         } else if (record.reason === REASON.CLOSED || record.reason === REASON.SPECIAL) {
             tr.className = "status-neutral";
