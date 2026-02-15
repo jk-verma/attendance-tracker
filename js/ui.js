@@ -142,8 +142,6 @@ function bindImportExportDeleteActions(ctx) {
 
     const importFile = document.getElementById("importFile");
     const qrImageFile = document.getElementById("qrImageFile");
-    const mobileQrScanBtn = document.getElementById("mobileQrScanBtn");
-    const mobileQrUploadBtn = document.getElementById("mobileQrUploadBtn");
 
     if (!importBtn || !exportBtn || !deleteBtn || !importMenu || !exportMenu || !deleteMenu || !importFile || !qrImageFile) {
         console.error("Action menu elements missing.");
@@ -154,18 +152,6 @@ function bindImportExportDeleteActions(ctx) {
         event.stopPropagation();
         toggleMenu(importMenu);
     });
-
-    if (mobileQrScanBtn) {
-        mobileQrScanBtn.addEventListener("click", function () {
-            importQRFromScanner(() => refreshAfterDataMutation(monthFilterEl, empTypeEl));
-        });
-    }
-
-    if (mobileQrUploadBtn) {
-        mobileQrUploadBtn.addEventListener("click", function () {
-            qrImageFile.click();
-        });
-    }
 
     exportBtn.addEventListener("click", event => {
         event.stopPropagation();
