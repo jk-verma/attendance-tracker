@@ -21,8 +21,8 @@ function renderTable() {
 
         const tr = document.createElement("tr");
 
-        if (isPendingOutReason(record.reason)) {
-            tr.className = "status-pending";
+        if (isMissingOutReason(record.reason)) {
+            tr.className = "status-missing";
         } else if (record.reason === REASON.CLOSED || record.reason === REASON.SPECIAL) {
             tr.className = "status-neutral";
         } else if (record.status === STATUS.COMPLIANT) {
