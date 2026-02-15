@@ -221,56 +221,133 @@ async function startHtml5QrCameraScan(onComplete) {
     }
 }
 
-function importQRFromFile(file, onComplete) {
+async function importQRFromFile(file, onComplete) {
 
     if (!file) {
         if (typeof onComplete === "function") onComplete(false);
         return;
     }
 
-    if (typeof Html5Qrcode !== "undefined") {
-        const readerContainer = document.getElementById("qrReader");
-        readerContainer.innerHTML = "";
+    const readerContainer = document.getElementById("qrReader");
+    if (readerContainer) readerContainer.innerHTML = "";
 
-        const html5QrCode = new Html5Qrcode("qrReader");
-
-        html5QrCode.scanFile(file, true)
-            .then(decodedText => {
-                const ok = processQrPayload(decodedText, "QR File Imported & Recalculated");
-                html5QrCode.clear();
-                if (typeof onComplete === "function") onComplete(ok);
-            })
-            .catch(() => {
-                fallbackManualQrImport(onComplete);
-            });
+    const html5Result = await decodeFromFileWithHtml5Qrcode(file);
+    if (html5Result) {
+        const ok = processQrPayload(html5Result, "QR File Imported & Recalculated");
+        if (typeof onComplete === "function") onComplete(ok);
         return;
     }
 
-    if (typeof BarcodeDetector !== "undefined") {
-        createImageBitmap(file)
-            .then(async bitmap => {
-                const detector = new BarcodeDetector({ formats: ["qr_code"] });
-                const barcodes = await detector.detect(bitmap);
-                const qr = barcodes.find(b => b.rawValue);
-                if (!qr) {
-                    fallbackManualQrImport(onComplete);
-                    return;
-                }
+    const barcodeResult = await decodeFromFileWithBarcodeDetector(file);
+    if (barcodeResult) {
+        const ok = processQrPayload(barcodeResult, "QR File Imported & Recalculated");
+        if (typeof onComplete === "function") onComplete(ok);
+        return;
+    }
 
-                const ok = processQrPayload(qr.rawValue, "QR File Imported & Recalculated");
-                if (typeof onComplete === "function") onComplete(ok);
-            })
-            .catch(() => {
-                fallbackManualQrImport(onComplete);
-            });
+    const jsqrResult = await decodeFromFileWithJsQr(file);
+    if (jsqrResult) {
+        const ok = processQrPayload(jsqrResult, "QR File Imported & Recalculated");
+        if (typeof onComplete === "function") onComplete(ok);
         return;
     }
 
     fallbackManualQrImport(onComplete);
 }
 
+function decodeFromFileWithHtml5Qrcode(file) {
+
+    if (typeof Html5Qrcode === "undefined") {
+        return Promise.resolve("");
+    }
+
+    const html5QrCode = new Html5Qrcode("qrReader");
+
+    return html5QrCode.scanFile(file, true)
+        .then(decodedText => {
+            html5QrCode.clear().catch(() => {});
+            return decodedText || "";
+        })
+        .catch(() => {
+            html5QrCode.clear().catch(() => {});
+            return "";
+        });
+}
+
+function decodeFromFileWithBarcodeDetector(file) {
+
+    if (typeof BarcodeDetector === "undefined" || typeof createImageBitmap !== "function") {
+        return Promise.resolve("");
+    }
+
+    return createImageBitmap(file)
+        .then(async bitmap => {
+            const detector = new BarcodeDetector({ formats: ["qr_code"] });
+            const barcodes = await detector.detect(bitmap);
+            const qr = barcodes.find(b => b.rawValue);
+            return qr ? qr.rawValue : "";
+        })
+        .catch(() => "");
+}
+
+function decodeFromFileWithJsQr(file) {
+
+    if (typeof jsQR !== "function") {
+        return Promise.resolve("");
+    }
+
+    return readFileAsImage(file)
+        .then(img => {
+            const scaleCandidates = [1, 0.75, 0.5, 0.35, 0.25];
+            for (const scale of scaleCandidates) {
+                const decoded = scanImageAtScaleWithJsQr(img, scale);
+                if (decoded) return decoded;
+            }
+            return "";
+        })
+        .catch(() => "");
+}
+
+function readFileAsImage(file) {
+
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+
+        reader.onload = function (e) {
+            const img = new Image();
+            img.onload = function () {
+                resolve(img);
+            };
+            img.onerror = reject;
+            img.src = e.target.result;
+        };
+
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+    });
+}
+
+function scanImageAtScaleWithJsQr(image, scale) {
+
+    const width = Math.max(200, Math.round(image.width * scale));
+    const height = Math.max(200, Math.round(image.height * scale));
+
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+
+    const ctx = canvas.getContext("2d", { willReadFrequently: true });
+    if (!ctx) return "";
+
+    ctx.drawImage(image, 0, 0, width, height);
+    const imageData = ctx.getImageData(0, 0, width, height);
+
+    const decoded = jsQR(imageData.data, width, height, { inversionAttempts: "attemptBoth" });
+    return decoded && decoded.data ? decoded.data : "";
+}
+
 function fallbackManualQrImport(onComplete) {
-    const manualPayload = prompt("Unable to decode QR image in this browser. Paste QR JSON payload here:");
+    const manualPayload = prompt("Unable to decode QR image automatically. Paste QR JSON payload here only if needed:");
     if (!manualPayload) {
         if (typeof onComplete === "function") onComplete(false);
         return;
