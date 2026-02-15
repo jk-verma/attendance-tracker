@@ -61,7 +61,6 @@ function initializePickers(monthFilterEl, dateEl, inEl, outEl) {
         noCalendar: true,
         dateFormat: "h:i K",
         time_24hr: false,
-        defaultDate: "09:00 AM",
         allowInput: true,
         clickOpens: true,
         disableMobile: true
@@ -72,11 +71,16 @@ function initializePickers(monthFilterEl, dateEl, inEl, outEl) {
         noCalendar: true,
         dateFormat: "h:i K",
         time_24hr: false,
-        defaultDate: "05:30 PM",
         allowInput: true,
         clickOpens: true,
         disableMobile: true
     });
+
+    inEl.value = "";
+    outEl.value = "";
+
+    inEl.placeholder = "09:00 AM";
+    outEl.placeholder = "05:30 PM";
 }
 
 function bindCoreActions(ctx) {
@@ -138,6 +142,8 @@ function bindImportExportDeleteActions(ctx) {
 
     const importFile = document.getElementById("importFile");
     const qrImageFile = document.getElementById("qrImageFile");
+    const mobileQrScanBtn = document.getElementById("mobileQrScanBtn");
+    const mobileQrUploadBtn = document.getElementById("mobileQrUploadBtn");
 
     if (!importBtn || !exportBtn || !deleteBtn || !importMenu || !exportMenu || !deleteMenu || !importFile || !qrImageFile) {
         console.error("Action menu elements missing.");
@@ -148,6 +154,18 @@ function bindImportExportDeleteActions(ctx) {
         event.stopPropagation();
         toggleMenu(importMenu);
     });
+
+    if (mobileQrScanBtn) {
+        mobileQrScanBtn.addEventListener("click", function () {
+            importQRFromScanner(() => refreshAfterDataMutation(monthFilterEl, empTypeEl));
+        });
+    }
+
+    if (mobileQrUploadBtn) {
+        mobileQrUploadBtn.addEventListener("click", function () {
+            qrImageFile.click();
+        });
+    }
 
     exportBtn.addEventListener("click", event => {
         event.stopPropagation();
@@ -274,15 +292,22 @@ function handleSaveRecord(payload) {
     }
 
     const empType = payload.empType || "faculty";
+    const inTime = payload.inTime || "";
+    const hasManualOutTime = Boolean(payload.outTime);
+    const computedOutTime = hasManualOutTime
+        ? payload.outTime
+        : calculateAutoPunchOutTime(inTime, empType);
+
     const record = {
         date: payload.date,
         empType,
         empLabel: empType === "faculty" ? "Faculty" : "Staff",
-        inTime: payload.inTime || "",
-        outTime: payload.outTime || "",
+        inTime,
+        outTime: computedOutTime,
         hours: 0,
         status: "",
-        reason: ""
+        reason: "",
+        isAutoPunchOutPending: !hasManualOutTime
     };
 
     const closedHoliday = document.getElementById("closedHoliday").value === "yes";
@@ -294,13 +319,25 @@ function handleSaveRecord(payload) {
     } else if (specialLeave) {
         record.status = STATUS.COMPLIANT;
         record.reason = REASON.SPECIAL;
-    } else if (!record.outTime) {
+    } else if (!hasManualOutTime) {
         record.status = STATUS.NON_COMPLIANT;
         record.reason = REASON.PENDING;
+        record.hours = calculateHours(timeToMinutes(record.inTime), timeToMinutes(record.outTime));
     }
 
     upsertRecord(record);
 
     const reEvaluated = evaluateMonth(getAllRecords());
     saveAllRecords(reEvaluated);
+}
+
+function calculateAutoPunchOutTime(inTime, empType) {
+    const inMinutes = timeToMinutes(inTime);
+    if (inMinutes == null) {
+        return minutesToTime(OFFICE_END_MIN);
+    }
+
+    const requiredHours = empType === "staff" ? STAFF_STANDARD_HOURS : FACULTY_STANDARD_HOURS;
+    const requiredMinutes = Math.round(requiredHours * 60);
+    return minutesToTime(inMinutes + requiredMinutes);
 }
