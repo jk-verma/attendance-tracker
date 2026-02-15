@@ -7,8 +7,6 @@
    - Always return data sorted by date (ascending)
 ============================================================ */
 
-const STORAGE_KEY = 'attendance_records_v1';
-
 /* ------------------------------------------------------------
    Get All Records (Sorted by Date)
 ------------------------------------------------------------ */

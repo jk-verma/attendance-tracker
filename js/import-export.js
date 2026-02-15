@@ -1,28 +1,11 @@
 /* ============================================================
    IMPORT / EXPORT MODULE
-   Version: v1.0 Stable
-   Purpose:
-   - CSV Import
-   - CSV Export
-   - QR Export
-   - QR Import
-   NOTE:
-   - No rule logic here
-   - Recalculation triggered after import
 ============================================================ */
 
-function getAllRecords() {
-    return JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
-}
-
-function saveAllRecords(records) {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
-}
-
-/* ================= CSV EXPORT ================= */
-
 function exportCSV(records, filename = "attendance_export.csv") {
+
     let csv = "Date,Emp,In,Out,Hours,Status,Reason\n";
+
     records.forEach(r => {
         csv += `${r.date || ""},${r.empLabel || ""},${r.inTime || ""},${r.outTime || ""},${r.hours || ""},${r.status || ""},${r.reason || ""}\n`;
     });
@@ -34,30 +17,32 @@ function exportCSV(records, filename = "attendance_export.csv") {
     link.click();
 }
 
-/* ================= CSV IMPORT ================= */
-
 function importCSV(file) {
 
     const reader = new FileReader();
 
     reader.onload = function (evt) {
 
-        const lines = evt.target.result.split('\n').filter(l => l.trim() !== '');
-        if (!lines[0].includes("Date")) {
+        const lines = evt.target.result.split("\n").filter(l => l.trim() !== "");
+
+        if (!lines.length || !lines[0].includes("Date")) {
             alert("Invalid CSV Format");
             return;
         }
 
-        let records = [];
+        const records = [];
 
         lines.slice(1).forEach(line => {
             const parts = line.split(",");
             if (parts.length < 4) return;
 
+            const empLabel = parts[1].trim() || "Faculty";
+            const empType = empLabel.toLowerCase().includes("staff") ? "staff" : "faculty";
+
             records.push({
                 date: parts[0].trim(),
-                empType: parts[1].trim().toLowerCase(),
-                empLabel: parts[1].trim(),
+                empType,
+                empLabel: empType === "faculty" ? "Faculty" : "Staff",
                 inTime: parts[2].trim(),
                 outTime: parts[3].trim(),
                 hours: "",
@@ -66,21 +51,18 @@ function importCSV(file) {
             });
         });
 
-        // Recalculate using engine
         const evaluated = evaluateMonth(records);
         saveAllRecords(evaluated);
 
         if (typeof renderTable === "function") renderTable();
         alert("CSV Imported & Recalculated Successfully");
-
     };
 
     reader.readAsText(file);
 }
 
-/* ================= QR EXPORT ================= */
-
 function exportQR(records) {
+
     const payload = JSON.stringify(records);
     const container = document.getElementById("qrContainer");
     container.innerHTML = "";
@@ -89,8 +71,6 @@ function exportQR(records) {
         if (!err) container.appendChild(canvas);
     });
 }
-
-/* ================= QR IMPORT ================= */
 
 function importQR() {
 
@@ -119,6 +99,5 @@ function importQR() {
         } catch (e) {
             alert("Invalid QR Data");
         }
-
     });
 }

@@ -1,23 +1,32 @@
 /* ============================================================
    MONTHLY RECALCULATION ENGINE
-   Version: v1.0 Stable
-   Purpose:
-   - Sort records chronologically
-   - Apply attendance rules in date order
-   - Enforce:
-        • Semimonthly relaxation (max 2)
-        • Staff 30% rule
-   - Return fully recalculated records
 ============================================================ */
+
+function applyAttendanceRules(record, relaxationCount, type2Count, type2Limit) {
+
+    if (record.empType === "faculty") {
+        return applyFacultyRules(record, relaxationCount);
+    }
+
+    if (record.empType === "staff") {
+        return applyStaffRules(record, relaxationCount, type2Count, type2Limit);
+    }
+
+    return {
+        hours: 0,
+        status: STATUS.NON_COMPLIANT,
+        reason: REASON.REJECT,
+        usedRelaxation: false,
+        usedType2: false
+    };
+}
 
 function evaluateMonth(records) {
 
     if (!Array.isArray(records)) return [];
 
-    // Sort chronologically
     records.sort((a, b) => a.date.localeCompare(b.date));
 
-    // Group by YYYY-MM
     const grouped = {};
 
     records.forEach(r => {
@@ -26,7 +35,6 @@ function evaluateMonth(records) {
         grouped[month].push(r);
     });
 
-    // Process each month separately
     Object.keys(grouped).forEach(month => {
 
         const monthRecords = grouped[month];
@@ -35,15 +43,20 @@ function evaluateMonth(records) {
         let type2Count = 0;
 
         const workingDays = calculateWorkingDays(month);
-        const closedHolidays = monthRecords.filter(r => r.reason === "Closed Holiday").length;
-
-        const type2Limit = Math.floor((workingDays - closedHolidays) * 0.30);
+        const closedHolidays = monthRecords.filter(r => r.reason === REASON.CLOSED).length;
+        const type2Limit = Math.floor((workingDays - closedHolidays) * STAFF_LATE_TYPE2_PERCENT);
 
         monthRecords.forEach(record => {
 
-            // Skip holidays
-            if (record.reason === "Closed Holiday" || record.reason === "Special Leave") {
-                record.status = "Compliant";
+            if (record.reason === REASON.CLOSED || record.reason === REASON.SPECIAL) {
+                record.status = STATUS.COMPLIANT;
+                record.hours = 0;
+                return;
+            }
+
+            if (!record.outTime) {
+                record.status = STATUS.NON_COMPLIANT;
+                record.reason = REASON.PENDING;
                 record.hours = 0;
                 return;
             }
@@ -62,15 +75,10 @@ function evaluateMonth(records) {
             if (evaluated.usedRelaxation) relaxationCount++;
             if (evaluated.usedType2) type2Count++;
         });
-
     });
 
     return records;
 }
-
-/* ============================================================
-   WORKING DAYS CALCULATION (Mon–Fri)
-============================================================ */
 
 function calculateWorkingDays(month) {
 
@@ -80,7 +88,7 @@ function calculateWorkingDays(month) {
 
     while (date.getMonth() === m - 1) {
         const day = date.getDay();
-        if (day !== 0 && day !== 6) count++; // Mon-Fri
+        if (day !== 0 && day !== 6) count++;
         date.setDate(date.getDate() + 1);
     }
 

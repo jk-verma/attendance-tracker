@@ -1,41 +1,40 @@
 /* ============================================================
    APP BOOTSTRAP MODULE
-   Version: v1.0 Stable
-   Purpose:
-   - Initialize application
-   - Connect modules
-   - Ensure proper startup sequence
-   NOTE:
-   - No attendance rules here
-   - No storage logic here
-   - No UI layout logic here
 ============================================================ */
 
 (function () {
 
-    console.log("Attendance Tracker v1.0 Stable Booting...");
-
-    // Ensure required modules exist
-    if (typeof STORAGE_KEY === "undefined") {
-        console.error("CONFIG MODULE NOT LOADED.");
-        return;
+    if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", boot);
+    } else {
+        boot();
     }
 
-    // Initialize default date if UI module provides method
-    if (typeof initializeUI === "function") {
-        initializeUI();
-    }
+    function boot() {
 
-    // Render existing records
-    if (typeof renderTable === "function") {
-        renderTable();
-    }
+        console.log("Attendance Tracker Booting...");
 
-    // Attach summary refresh if function exists
-    if (typeof initializeSummary === "function") {
-        initializeSummary();
-    }
+        if (typeof STORAGE_KEY === "undefined") {
+            console.error("CONFIG MODULE NOT LOADED.");
+            return;
+        }
 
-    console.log("Application Initialized Successfully.");
+        if (typeof initializeUI === "function") {
+            initializeUI();
+        }
+
+        if (typeof renderTable === "function") {
+            renderTable();
+        }
+
+        const monthFilterEl = document.getElementById("monthFilter");
+        const empTypeEl = document.getElementById("empType");
+
+        if (monthFilterEl && empTypeEl && monthFilterEl.value && typeof renderSummary === "function") {
+            renderSummary(monthFilterEl.value, empTypeEl.value);
+        }
+
+        console.log("Application Initialized Successfully.");
+    }
 
 })();
