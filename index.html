@@ -116,6 +116,11 @@
 </div>
 </div>
 
+<div class="mobile-quick-actions">
+<button id="mobileQrScanBtn" type="button">QR Code Scan</button>
+<button id="mobileQrUploadBtn" type="button">QR Code Image Upload</button>
+</div>
+
 <div class="dropdown">
 <button id="exportBtn">Export Report</button>
 <div class="dropdown-menu" id="exportMenu">
@@ -135,7 +140,7 @@
 </div>
 
 <input type="file" id="importFile" accept=".csv" style="display:none">
-<input type="file" id="qrImageFile" accept="image/*" style="display:none">
+<input type="file" id="qrImageFile" accept="image/*" capture="environment" style="display:none">
 
 </div>
 
