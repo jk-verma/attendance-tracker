@@ -102,11 +102,6 @@ button.danger:hover {
     margin-top: 20px;
 }
 
-.mobile-quick-actions {
-    display: none;
-    gap: 8px;
-}
-
 /* ==============================
    Dropdown Menus
 ============================== */
@@ -219,11 +214,6 @@ th {
     }
 
     .action-row {
-        grid-template-columns: 1fr;
-    }
-
-    .mobile-quick-actions {
-        display: grid;
         grid-template-columns: 1fr;
     }
 
