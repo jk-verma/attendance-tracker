@@ -300,31 +300,77 @@ records.push({
 localStorage.setItem(STORAGE_KEY,JSON.stringify(records));
 recalcMonth(date.slice(0,7));
 renderTable();
+// Do NOT auto-open summary after save
+monthSummary.style.display='none';
 editingDate=null;
 }
 
 /* ================= SUMMARY ================= */
 function renderSummary(){
 const month=monthFilter.value;
-if(!month) return;
+if(!month){ monthSummary.style.display='none'; return; }
+
 const emp=empType.selectedOptions[0].text;
 const records=JSON.parse(localStorage.getItem(STORAGE_KEY)||'[]')
 .filter(r=>r.date.startsWith(month)&&r.empLabel===emp);
 
 let compliant=records.filter(r=>r.status==='Compliant').length;
 let non=records.filter(r=>r.status==='Non-Compliant').length;
+let grace=records.filter(r=>r.reason==='Grace').length;
+let relax=records.filter(r=>r.reason==='Semimonthly Relaxation').length;
 let pending=records.filter(r=>r.reason==='Pending Punch-Out').length;
+let closed=records.filter(r=>r.reason==='Closed Holiday').length;
+let special=records.filter(r=>r.reason==='Special Leave').length;
 
 monthSummary.style.display='block';
-monthSummary.innerHTML='<button id="summaryClose">×</button>'+
-'<b>'+month+' - '+emp+'</b><br>'+ 
-'Total Records: '+records.length+'<br>'+ 
-'Compliant: '+compliant+'<br>'+ 
-'Non-Compliant: '+non+'<br>'+ 
-'Pending Punch-Out: '+pending;
+
+if(emp==='Faculty'){
+    const lateComp=records.filter(r=>r.reason==='Late Compensation').length;
+    monthSummary.innerHTML='<button id="summaryClose">×</button>'+
+    '<b>'+month+' - Faculty</b><br>'+
+    'Total Records: '+records.length+'<br>'+
+    'Compliant: '+compliant+'<br>'+
+    'Non-Compliant: '+non+'<br>'+
+    'Grace: '+grace+'<br>'+
+    'Relaxation: '+relax+'/2<br>'+
+    'Late Compensation: '+lateComp+'<br>'+
+    'Pending Punch-Out: '+pending+'<br>'+
+    'Closed Holiday: '+closed+'<br>'+
+    'Special Leave: '+special;
+}
+
+if(emp==='Staff'){
+    const typeI=records.filter(r=>r.reason==='Late Compensation-Type I').length;
+    const typeII=records.filter(r=>r.reason==='Late Compensation-Type II').length;
+
+    const year=parseInt(month.slice(0,4));
+    const mon=parseInt(month.slice(5,7))-1;
+    const daysInMonth=new Date(year,mon+1,0).getDate();
+    let workingDays=0;
+    for(let d=1; d<=daysInMonth; d++){
+        const day=new Date(year,mon,d).getDay();
+        if(day!==0 && day!==6) workingDays++;
+    }
+    const effective=workingDays-closed;
+    const limit=Math.floor(effective*0.30);
+
+    monthSummary.innerHTML='<button id="summaryClose">×</button>'+
+    '<b>'+month+' - Staff</b><br>'+
+    'Total Records: '+records.length+'<br>'+
+    'Compliant: '+compliant+'<br>'+
+    'Non-Compliant: '+non+'<br>'+
+    'Grace: '+grace+'<br>'+
+    'Relaxation: '+relax+'/2<br>'+
+    'Late Compensation Type I: '+typeI+'<br>'+
+    'Late Compensation Type II: '+typeII+'/'+limit+'<br>'+
+    'Pending Punch-Out: '+pending+'<br>'+
+    'Closed Holiday: '+closed+'<br>'+
+    'Special Leave: '+special;
+}
+
 
 document.getElementById('summaryClose').onclick=function(){
-monthSummary.style.display='none';
+    monthSummary.style.display='none';
 };
 }
 
@@ -344,7 +390,7 @@ else tr.className='status-noncompliant';
 tr.innerHTML='<td>'+r.date+'</td><td>'+r.empLabel+'</td><td>'+r.inTime+'</td><td>'+r.outTime+'</td><td>'+r.hours+'</td><td>'+r.status+'</td><td>'+r.reason+'</td><td><button onclick="editRecord(\''+r.date+'\')">Edit</button></td><td><button onclick="deleteRecord(\''+r.date+'\')" style="background:#c62828">Delete</button></td>';
 tbody.appendChild(tr);
 });
-if(month) renderSummary();
+// Do NOT auto-open summary here. Summary will open only when month is deliberately selected.
 }
 
 function editRecord(date){
@@ -369,7 +415,10 @@ renderTable();
 }
 
 saveBtn.addEventListener('click',saveRecord);
-monthFilter.addEventListener('change',renderTable);
+monthFilter.addEventListener('change',function(){
+    renderTable();
+    renderSummary(); // Open summary ONLY when month picker is used
+});
 empType.addEventListener('change',renderTable);
 renderTable();
 </script>
