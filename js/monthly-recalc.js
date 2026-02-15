@@ -1,6 +1,5 @@
 /* ============================================================
    MONTHLY RECALCULATION ENGINE
-   Version: v1.0 Stable
 ============================================================ */
 
 function applyAttendanceRules(record, relaxationCount, type2Count, type2Limit) {
@@ -15,8 +14,8 @@ function applyAttendanceRules(record, relaxationCount, type2Count, type2Limit) {
 
     return {
         hours: 0,
-        status: "Non-Compliant",
-        reason: "REJECT",
+        status: STATUS.NON_COMPLIANT,
+        reason: REASON.REJECT,
         usedRelaxation: false,
         usedType2: false
     };
@@ -49,15 +48,15 @@ function evaluateMonth(records) {
 
         monthRecords.forEach(record => {
 
-            if (record.reason === "Closed Holiday" || record.reason === "Special Leave") {
-                record.status = "Compliant";
+            if (record.reason === REASON.CLOSED || record.reason === REASON.SPECIAL) {
+                record.status = STATUS.COMPLIANT;
                 record.hours = 0;
                 return;
             }
 
             if (!record.outTime) {
-                record.status = "Non-Compliant";
-                record.reason = "Pending Punch-Out";
+                record.status = STATUS.NON_COMPLIANT;
+                record.reason = REASON.PENDING;
                 record.hours = 0;
                 return;
             }
