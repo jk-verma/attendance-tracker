@@ -54,16 +54,31 @@ function evaluateMonth(records) {
                 return;
             }
 
-            if (record.isAutoPunchOutPending) {
+            if (record.isAutoPunchInMissing) {
                 record.status = STATUS.NON_COMPLIANT;
-                record.reason = buildPendingOutReason(record.outTime);
+                record.reason = buildMissingInReason(record.inTime);
+                record.hours = calculateHours(timeToMinutes(record.inTime), timeToMinutes(record.outTime));
+                return;
+            }
+
+            if (!record.inTime) {
+                record.status = STATUS.NON_COMPLIANT;
+                record.reason = REASON.MINSSING_PUNCH_IN;
+                record.hours = 0;
+                return;
+            }
+
+
+            if (record.isAutoPunchOutMissing) {
+                record.status = STATUS.NON_COMPLIANT;
+                record.reason = buildMissingOutReason(record.outTime);
                 record.hours = calculateHours(timeToMinutes(record.inTime), timeToMinutes(record.outTime));
                 return;
             }
 
             if (!record.outTime) {
                 record.status = STATUS.NON_COMPLIANT;
-                record.reason = REASON.PENDING;
+                record.reason = REASON.MISSING_PUNCH_OUT;
                 record.hours = 0;
                 return;
             }
