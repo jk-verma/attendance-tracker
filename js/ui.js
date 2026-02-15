@@ -293,7 +293,7 @@ function handleSaveRecord(payload) {
         hours: 0,
         status: "",
         reason: "",
-        isAutoPunchOutPending: !hasManualOutTime
+        isAutoPunchOutMissing: !hasManualOutTime
     };
 
     const closedHoliday = document.getElementById("closedHoliday").value === "yes";
@@ -307,7 +307,7 @@ function handleSaveRecord(payload) {
         record.reason = REASON.SPECIAL;
     } else if (!hasManualOutTime) {
         record.status = STATUS.NON_COMPLIANT;
-        record.reason = buildPendingOutReason(record.outTime);
+        record.reason = buildMissingOutReason(record.outTime);
         record.hours = calculateHours(timeToMinutes(record.inTime), timeToMinutes(record.outTime));
     }
 
