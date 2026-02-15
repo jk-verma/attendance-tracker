@@ -89,6 +89,13 @@ async function importQRFromScanner(onComplete) {
     const readerContainer = document.getElementById("qrReader");
     readerContainer.innerHTML = "";
 
+    // Preferred path: html5-qrcode webcam scanner
+    if (typeof Html5Qrcode !== "undefined") {
+        const started = await startHtml5QrCameraScan(onComplete);
+        if (started) return;
+    }
+
+    // Secondary path: html5-qrcode scanner widget
     if (typeof Html5QrcodeScanner !== "undefined") {
         const scanner = new Html5QrcodeScanner("qrReader", { fps: 10, qrbox: 250 });
 
@@ -100,15 +107,15 @@ async function importQRFromScanner(onComplete) {
         return;
     }
 
-    // Fallback: built-in BarcodeDetector + camera
+    // Native browser fallback for environments without external libs
     if (typeof BarcodeDetector === "undefined" || !navigator.mediaDevices?.getUserMedia) {
-        alert("QR Scanner library missing and browser camera fallback is unavailable.");
+        alert("QR scanner is unavailable in this browser. Please use QR Code Image Upload option.");
         if (typeof onComplete === "function") onComplete(false);
         return;
     }
 
     readerContainer.innerHTML = `
-        <div style="margin-bottom:8px">Fallback scanner active. Point camera at QR code.</div>
+        <div style="margin-bottom:8px">Fallback webcam scanner active. Point camera at QR code.</div>
         <video id="qrFallbackVideo" autoplay playsinline style="width:300px;border:1px solid #ccc"></video>
         <button id="qrFallbackStop" style="margin-top:8px">Stop Scan</button>
     `;
@@ -162,6 +169,58 @@ async function importQRFromScanner(onComplete) {
     requestAnimationFrame(scanLoop);
 }
 
+async function startHtml5QrCameraScan(onComplete) {
+
+    const readerContainer = document.getElementById("qrReader");
+    readerContainer.innerHTML = `
+        <div style="margin-bottom:8px">Webcam scanner active. Point camera at QR code.</div>
+        <div id="qrReaderCamera" style="width:300px"></div>
+        <button id="qrCameraStop" style="margin-top:8px">Stop Scan</button>
+    `;
+
+    let html5QrCode;
+
+    try {
+        html5QrCode = new Html5Qrcode("qrReaderCamera");
+        const cameras = await Html5Qrcode.getCameras();
+
+        if (!cameras || cameras.length === 0) {
+            readerContainer.innerHTML = "";
+            return false;
+        }
+
+        const preferred = cameras.find(c => /back|rear|environment/i.test(c.label)) || cameras[0];
+
+        await html5QrCode.start(
+            preferred.id,
+            { fps: 10, qrbox: 250 },
+            (decodedText) => {
+                const ok = processQrPayload(decodedText, "QR Imported & Recalculated");
+                html5QrCode.stop().then(() => html5QrCode.clear()).catch(() => {});
+                readerContainer.innerHTML = "";
+                if (typeof onComplete === "function") onComplete(ok);
+            },
+            () => {}
+        );
+
+        const stopBtn = document.getElementById("qrCameraStop");
+        stopBtn.addEventListener("click", () => {
+            html5QrCode.stop().then(() => html5QrCode.clear()).catch(() => {});
+            readerContainer.innerHTML = "";
+            if (typeof onComplete === "function") onComplete(false);
+        });
+
+        return true;
+
+    } catch (e) {
+        if (html5QrCode) {
+            html5QrCode.stop().then(() => html5QrCode.clear()).catch(() => {});
+        }
+        readerContainer.innerHTML = "";
+        return false;
+    }
+}
+
 function importQRFromFile(file, onComplete) {
 
     if (!file) {
@@ -182,37 +241,43 @@ function importQRFromFile(file, onComplete) {
                 if (typeof onComplete === "function") onComplete(ok);
             })
             .catch(() => {
-                alert("Unable to read QR from selected image.");
-                if (typeof onComplete === "function") onComplete(false);
+                fallbackManualQrImport(onComplete);
             });
         return;
     }
 
-    // Fallback: built-in BarcodeDetector on image bitmap
-    if (typeof BarcodeDetector === "undefined") {
-        alert("QR Scanner library missing and browser image fallback is unavailable.");
+    if (typeof BarcodeDetector !== "undefined") {
+        createImageBitmap(file)
+            .then(async bitmap => {
+                const detector = new BarcodeDetector({ formats: ["qr_code"] });
+                const barcodes = await detector.detect(bitmap);
+                const qr = barcodes.find(b => b.rawValue);
+                if (!qr) {
+                    fallbackManualQrImport(onComplete);
+                    return;
+                }
+
+                const ok = processQrPayload(qr.rawValue, "QR File Imported & Recalculated");
+                if (typeof onComplete === "function") onComplete(ok);
+            })
+            .catch(() => {
+                fallbackManualQrImport(onComplete);
+            });
+        return;
+    }
+
+    fallbackManualQrImport(onComplete);
+}
+
+function fallbackManualQrImport(onComplete) {
+    const manualPayload = prompt("Unable to decode QR image in this browser. Paste QR JSON payload here:");
+    if (!manualPayload) {
         if (typeof onComplete === "function") onComplete(false);
         return;
     }
 
-    createImageBitmap(file)
-        .then(async bitmap => {
-            const detector = new BarcodeDetector({ formats: ["qr_code"] });
-            const barcodes = await detector.detect(bitmap);
-            const qr = barcodes.find(b => b.rawValue);
-            if (!qr) {
-                alert("Unable to read QR from selected image.");
-                if (typeof onComplete === "function") onComplete(false);
-                return;
-            }
-
-            const ok = processQrPayload(qr.rawValue, "QR File Imported & Recalculated");
-            if (typeof onComplete === "function") onComplete(ok);
-        })
-        .catch(() => {
-            alert("Unable to read QR from selected image.");
-            if (typeof onComplete === "function") onComplete(false);
-        });
+    const ok = processQrPayload(manualPayload, "QR Payload Imported & Recalculated");
+    if (typeof onComplete === "function") onComplete(ok);
 }
 
 function processQrPayload(decodedText, successMessage) {
