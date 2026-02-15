@@ -11,14 +11,6 @@
    - Recalculation triggered after import
 ============================================================ */
 
-function getAllRecords() {
-    return JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
-}
-
-function saveAllRecords(records) {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
-}
-
 /* ================= CSV EXPORT ================= */
 
 function exportCSV(records, filename = "attendance_export.csv") {
