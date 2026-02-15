@@ -1,23 +1,33 @@
 /* ============================================================
    MONTHLY RECALCULATION ENGINE
    Version: v1.0 Stable
-   Purpose:
-   - Sort records chronologically
-   - Apply attendance rules in date order
-   - Enforce:
-        • Semimonthly relaxation (max 2)
-        • Staff 30% rule
-   - Return fully recalculated records
 ============================================================ */
+
+function applyAttendanceRules(record, relaxationCount, type2Count, type2Limit) {
+
+    if (record.empType === "faculty") {
+        return applyFacultyRules(record, relaxationCount);
+    }
+
+    if (record.empType === "staff") {
+        return applyStaffRules(record, relaxationCount, type2Count, type2Limit);
+    }
+
+    return {
+        hours: 0,
+        status: "Non-Compliant",
+        reason: "REJECT",
+        usedRelaxation: false,
+        usedType2: false
+    };
+}
 
 function evaluateMonth(records) {
 
     if (!Array.isArray(records)) return [];
 
-    // Sort chronologically
     records.sort((a, b) => a.date.localeCompare(b.date));
 
-    // Group by YYYY-MM
     const grouped = {};
 
     records.forEach(r => {
@@ -26,7 +36,6 @@ function evaluateMonth(records) {
         grouped[month].push(r);
     });
 
-    // Process each month separately
     Object.keys(grouped).forEach(month => {
 
         const monthRecords = grouped[month];
@@ -41,9 +50,15 @@ function evaluateMonth(records) {
 
         monthRecords.forEach(record => {
 
-            // Skip holidays
             if (record.reason === "Closed Holiday" || record.reason === "Special Leave") {
                 record.status = "Compliant";
+                record.hours = 0;
+                return;
+            }
+
+            if (!record.outTime) {
+                record.status = "Non-Compliant";
+                record.reason = "Pending Punch-Out";
                 record.hours = 0;
                 return;
             }
@@ -68,10 +83,6 @@ function evaluateMonth(records) {
     return records;
 }
 
-/* ============================================================
-   WORKING DAYS CALCULATION (Mon–Fri)
-============================================================ */
-
 function calculateWorkingDays(month) {
 
     const [year, m] = month.split("-").map(Number);
@@ -80,7 +91,7 @@ function calculateWorkingDays(month) {
 
     while (date.getMonth() === m - 1) {
         const day = date.getDay();
-        if (day !== 0 && day !== 6) count++; // Mon-Fri
+        if (day !== 0 && day !== 6) count++;
         date.setDate(date.getDate() + 1);
     }
 

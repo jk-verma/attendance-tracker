@@ -93,7 +93,7 @@ function applyStaffRules(record, relaxationCount, type2Count, type2Limit) {
         return buildResult(
             workedHours,
             "Compliant",
-            "Late Compensation Type I"
+            "Late Compensation—Type I"
         );
     }
 
@@ -110,7 +110,7 @@ function applyStaffRules(record, relaxationCount, type2Count, type2Limit) {
         return buildResult(
             workedHours,
             "Compliant",
-            "Late Compensation Type II",
+            "Late Compensation—Type II",
             false,
             true
         );
