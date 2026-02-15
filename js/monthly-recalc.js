@@ -44,9 +44,8 @@ function evaluateMonth(records) {
         let type2Count = 0;
 
         const workingDays = calculateWorkingDays(month);
-        const closedHolidays = monthRecords.filter(r => r.reason === "Closed Holiday").length;
-
-        const type2Limit = Math.floor((workingDays - closedHolidays) * 0.30);
+        const closedHolidays = monthRecords.filter(r => r.reason === REASON.CLOSED).length;
+        const type2Limit = Math.floor((workingDays - closedHolidays) * STAFF_LATE_TYPE2_PERCENT);
 
         monthRecords.forEach(record => {
 
@@ -77,7 +76,6 @@ function evaluateMonth(records) {
             if (evaluated.usedRelaxation) relaxationCount++;
             if (evaluated.usedType2) type2Count++;
         });
-
     });
 
     return records;

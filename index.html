@@ -42,7 +42,7 @@
 <input type="text" id="monthFilter" autocomplete="off">
 </div>
 
-<div id="summaryPanel"></div>
+<div id="summaryPanel" class="summary-panel" style="display:none"></div>
 
 <div class="row">
 <label>Date</label>
@@ -50,12 +50,12 @@
 </div>
 
 <div class="row">
-<label>Punch-In</label>
+<label>Punch-In Time</label>
 <input type="text" id="punchIn" autocomplete="off">
 </div>
 
 <div class="row">
-<label>Punch-Out</label>
+<label>Punch-Out Time</label>
 <input type="text" id="punchOut" autocomplete="off">
 </div>
 
@@ -110,17 +110,17 @@
 <div class="dropdown">
 <button id="importBtn">Import Report</button>
 <div class="dropdown-menu" id="importMenu">
-<div data-type="qr">QR Code</div>
-<div data-type="csv">CSV File</div>
+<div data-type="qr">QR Code Scan/Upload</div>
+<div data-type="csv">CSV File Upload</div>
 </div>
 </div>
 
 <div class="dropdown">
 <button id="exportBtn">Export Report</button>
 <div class="dropdown-menu" id="exportMenu">
-<div data-type="qr-month">QR Code – Filter Month</div>
+<div data-type="qr-month">QR Code – Filter Month Records</div>
 <div data-type="qr-all">QR Code – Entire Records</div>
-<div data-type="csv-month">CSV File – Filter Month</div>
+<div data-type="csv-month">CSV File – Filter Month Records</div>
 <div data-type="csv-all">CSV File – Entire Records</div>
 </div>
 </div>
@@ -134,6 +134,7 @@
 </div>
 
 <input type="file" id="importFile" accept=".csv" style="display:none">
+<input type="file" id="qrImageFile" accept="image/*" style="display:none">
 
 </div>
 
@@ -141,6 +142,7 @@
 <div id="qrReader"></div>
 
 </div>
+<footer class="app-footer">© <span id="copyrightYear"></span> Attendance Punch Tracker. All rights reserved.</footer>
 
 <!-- ================= APPLICATION MODULES ================= -->
 

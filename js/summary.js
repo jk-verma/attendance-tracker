@@ -1,10 +1,5 @@
 /* ============================================================
    SUMMARY MODULE
-   ------------------------------------------------------------
-   - Generates Filter Month Summary
-   - Faculty and Staff handled separately
-   - Does NOT open automatically
-   - Called only when monthFilter is deliberately selected
 ============================================================ */
 
 function generateMonthlySummary(month, empType) {
@@ -28,28 +23,22 @@ function generateMonthlySummary(month, empType) {
     };
 
     records.forEach(r => {
+        if (r.reason === REASON.CLOSED) summary.closedHoliday++;
+        if (r.reason === REASON.SPECIAL) summary.specialLeave++;
+        if (r.reason === REASON.PENDING) summary.pending++;
 
-        if (r.reason === "Closed Holiday") summary.closedHoliday++;
-        if (r.reason === "Special Leave") summary.specialLeave++;
-        if (r.reason === "Pending Punch-Out") summary.pending++;
+        if (r.status === STATUS.COMPLIANT) summary.compliant++;
+        if (r.status === STATUS.NON_COMPLIANT) summary.nonCompliant++;
 
-        if (r.status === "Compliant") summary.compliant++;
-        if (r.status === "Non-Compliant") summary.nonCompliant++;
-
-        if (r.reason === "Grace") summary.grace++;
-        if (r.reason === "Semimonthly Relaxation") summary.relaxation++;
-        if (r.reason === "Late Compensation") summary.lateComp++;
-        if (r.reason === "Late Compensation—Type I") summary.lateCompTypeI++;
-        if (r.reason === "Late Compensation—Type II") summary.lateCompTypeII++;
+        if (r.reason === REASON.GRACE) summary.grace++;
+        if (r.reason === REASON.SEMI_RELAX) summary.relaxation++;
+        if (r.reason === REASON.LATE_COMP) summary.lateComp++;
+        if (r.reason === REASON.LATE_COMP_TYPE1) summary.lateCompTypeI++;
+        if (r.reason === REASON.LATE_COMP_TYPE2) summary.lateCompTypeII++;
     });
 
     return summary;
 }
-
-
-/* ============================================================
-   RENDER SUMMARY PANEL
-============================================================ */
 
 function renderSummary(month, empType) {
 
@@ -58,52 +47,54 @@ function renderSummary(month, empType) {
 
     const s = generateMonthlySummary(month, empType);
 
-    let html = `<h3>${month}</h3>`;
+    let html = `
+        <div class="summary-header">
+            <h3>${month}</h3>
+            <button type="button" class="summary-close" onclick="closeSummary()">Close ✕</button>
+        </div>
+    `;
 
     if (empType === "faculty") {
-
         html += `
-        <div>Total Records: ${s.total}</div>
-        <div>Compliant: ${s.compliant}</div>
-        <div>Non-Compliant: ${s.nonCompliant}</div>
-        <div>Grace: ${s.grace}</div>
-        <div>Relaxation: ${s.relaxation}/2</div>
-        <div>Late Compensation: ${s.lateComp}</div>
-        <div>Pending Punch-Out: ${s.pending}</div>
-        <div>Closed Holiday: ${s.closedHoliday}</div>
-        <div>Special Leave: ${s.specialLeave}</div>
-        `;
+        <div class="summary-box">
+            <div>Total Records: ${s.total}</div>
+            <div>Compliant: ${s.compliant}</div>
+            <div>Non-Compliant: ${s.nonCompliant}</div>
+            <div>Grace: ${s.grace}</div>
+            <div>Relaxation: ${s.relaxation}/${FACULTY_RELAXATION_LIMIT}</div>
+            <div>Late Compensation: ${s.lateComp}</div>
+            <div>Pending Punch-Out: ${s.pending}</div>
+            <div>Closed Holiday: ${s.closedHoliday}</div>
+            <div>Special Leave: ${s.specialLeave}</div>
+        </div>`;
     }
 
     if (empType === "staff") {
-
         const workingDays = calculateWorkingDays(month);
-        const relaxLimit = Math.floor(workingDays * 0.30);
+        const type2Limit = Math.floor((workingDays - s.closedHoliday) * STAFF_LATE_TYPE2_PERCENT);
 
         html += `
-        <div>Total Records: ${s.total}</div>
-        <div>Compliant: ${s.compliant}</div>
-        <div>Non-Compliant: ${s.nonCompliant}</div>
-        <div>Grace: ${s.grace}</div>
-        <div>Relaxation: ${s.relaxation}/2</div>
-        <div>Late Compensation Type I: ${s.lateCompTypeI}</div>
-        <div>Late Compensation Type II: ${s.lateCompTypeII}/${relaxLimit}</div>
-        <div>Pending Punch-Out: ${s.pending}</div>
-        <div>Closed Holiday: ${s.closedHoliday}</div>
-        <div>Special Leave: ${s.specialLeave}</div>
-        `;
+        <div class="summary-box">
+            <div>Total Records: ${s.total}</div>
+            <div>Compliant: ${s.compliant}</div>
+            <div>Non-Compliant: ${s.nonCompliant}</div>
+            <div>Grace: ${s.grace}</div>
+            <div>Relaxation: ${s.relaxation}/${STAFF_RELAXATION_LIMIT}</div>
+            <div>Late Compensation Type I: ${s.lateCompTypeI}</div>
+            <div>Late Compensation Type II: ${s.lateCompTypeII}/${type2Limit}</div>
+            <div>Pending Punch-Out: ${s.pending}</div>
+            <div>Closed Holiday: ${s.closedHoliday}</div>
+            <div>Special Leave: ${s.specialLeave}</div>
+        </div>`;
     }
 
     panel.innerHTML = html;
     panel.style.display = "block";
 }
 
-
-/* ============================================================
-   CLOSE SUMMARY PANEL
-============================================================ */
-
 function closeSummary() {
     const panel = document.getElementById("summaryPanel");
-    if (panel) panel.style.display = "none";
+    if (!panel) return;
+    panel.innerHTML = "";
+    panel.style.display = "none";
 }

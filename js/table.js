@@ -1,9 +1,5 @@
 /* ============================================================
    TABLE MODULE
-   ------------------------------------------------------------
-   - Responsible ONLY for rendering records table
-   - No attendance logic here
-   - No storage logic here
 ============================================================ */
 
 function renderTable() {
@@ -13,10 +9,8 @@ function renderTable() {
 
     const selectedMonth = document.getElementById("monthFilter").value;
 
-    let records = getAllRecords()
-        .sort((a, b) => a.date.localeCompare(b.date));
+    let records = getAllRecords();
 
-    // Show only current month unless filter selected
     if (selectedMonth) {
         records = records.filter(r => r.date.startsWith(selectedMonth));
     }
@@ -27,17 +21,13 @@ function renderTable() {
 
         const tr = document.createElement("tr");
 
-        // Row coloring
-        if (record.reason === "Pending Punch-Out") {
+        if (record.reason === REASON.PENDING) {
             tr.className = "status-pending";
-        } 
-        else if (record.reason === "Closed Holiday" || record.reason === "Special Leave") {
+        } else if (record.reason === REASON.CLOSED || record.reason === REASON.SPECIAL) {
             tr.className = "status-neutral";
-        }
-        else if (record.status === "Compliant") {
+        } else if (record.status === STATUS.COMPLIANT) {
             tr.className = "status-compliant";
-        } 
-        else {
+        } else {
             tr.className = "status-noncompliant";
         }
 
@@ -49,27 +39,13 @@ function renderTable() {
             <td>${record.hours || ""}</td>
             <td>${record.status || ""}</td>
             <td>${record.reason || ""}</td>
-            <td>
-                <button onclick="loadRecordForEdit('${record.date}')">
-                    Edit
-                </button>
-            </td>
-            <td>
-                <button onclick="deleteRecord('${record.date}')" 
-                        style="background:#c62828">
-                    Delete
-                </button>
-            </td>
+            <td><button onclick="loadRecordForEdit('${record.date}')">Edit</button></td>
+            <td><button onclick="deleteRecord('${record.date}')" style="background:#c62828">Delete</button></td>
         `;
 
         tbody.appendChild(tr);
     });
 }
-
-
-/* ============================================================
-   LOAD RECORD INTO UI FOR EDITING
-============================================================ */
 
 function loadRecordForEdit(date) {
 
@@ -77,24 +53,30 @@ function loadRecordForEdit(date) {
     if (!record) return;
 
     document.getElementById("empType").value = record.empType;
-    document.getElementById("datePicker")._flatpickr.setDate(record.date, false);
-    document.getElementById("punchIn")._flatpickr.setDate(record.inTime || "", false);
-    document.getElementById("punchOut")._flatpickr.setDate(record.outTime || "", false);
+
+    const dateInput = document.getElementById("datePicker");
+    const inInput = document.getElementById("punchIn");
+    const outInput = document.getElementById("punchOut");
+
+    if (dateInput._flatpickr) dateInput._flatpickr.setDate(record.date, false);
+    else dateInput.value = record.date;
+
+    if (inInput._flatpickr) inInput._flatpickr.setDate(record.inTime || "", false);
+    else inInput.value = record.inTime || "";
+
+    if (outInput._flatpickr) outInput._flatpickr.setDate(record.outTime || "", false);
+    else outInput.value = record.outTime || "";
 }
-
-
-/* ============================================================
-   DELETE SINGLE RECORD
-============================================================ */
 
 function deleteRecord(date) {
 
     if (!confirm("Delete record for " + date + " ?")) return;
 
-    let records = getAllRecords()
-        .filter(r => r.date !== date);
-
-    saveAllRecords(records);
-
+    deleteRecordByDate(date);
     renderTable();
+
+    const month = document.getElementById("monthFilter").value;
+    const empType = document.getElementById("empType").value;
+
+    if (month) renderSummary(month, empType);
 }
