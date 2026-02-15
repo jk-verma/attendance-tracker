@@ -72,7 +72,7 @@ function exportQR(records) {
     });
 }
 
-function importQR() {
+function importQRFromScanner() {
 
     const readerContainer = document.getElementById("qrReader");
     readerContainer.innerHTML = "";
@@ -85,19 +85,52 @@ function importQR() {
     const scanner = new Html5QrcodeScanner("qrReader", { fps: 10, qrbox: 250 });
 
     scanner.render(function (decodedText) {
-
-        try {
-            const parsed = JSON.parse(decodedText);
-            const evaluated = evaluateMonth(parsed);
-            saveAllRecords(evaluated);
-
-            if (typeof renderTable === "function") renderTable();
-
-            scanner.clear();
-            alert("QR Imported & Recalculated");
-
-        } catch (e) {
-            alert("Invalid QR Data");
-        }
+        processQrPayload(decodedText, "QR Imported & Recalculated");
+        scanner.clear();
     });
+}
+
+function importQRFromFile(file) {
+
+    if (!file) return;
+
+    if (typeof Html5Qrcode === "undefined") {
+        alert("QR Scanner Library Missing");
+        return;
+    }
+
+    const readerContainer = document.getElementById("qrReader");
+    readerContainer.innerHTML = "";
+
+    const html5QrCode = new Html5Qrcode("qrReader");
+
+    html5QrCode.scanFile(file, true)
+        .then(decodedText => {
+            processQrPayload(decodedText, "QR File Imported & Recalculated");
+            html5QrCode.clear();
+        })
+        .catch(() => {
+            alert("Unable to read QR from selected image.");
+        });
+}
+
+function processQrPayload(decodedText, successMessage) {
+
+    try {
+        const parsed = JSON.parse(decodedText);
+
+        if (!Array.isArray(parsed)) {
+            alert("Invalid QR Data");
+            return;
+        }
+
+        const evaluated = evaluateMonth(parsed);
+        saveAllRecords(evaluated);
+
+        if (typeof renderTable === "function") renderTable();
+        alert(successMessage);
+
+    } catch (e) {
+        alert("Invalid QR Data");
+    }
 }

@@ -23,7 +23,6 @@ function generateMonthlySummary(month, empType) {
     };
 
     records.forEach(r => {
-
         if (r.reason === REASON.CLOSED) summary.closedHoliday++;
         if (r.reason === REASON.SPECIAL) summary.specialLeave++;
         if (r.reason === REASON.PENDING) summary.pending++;
@@ -47,7 +46,13 @@ function renderSummary(month, empType) {
     if (!panel) return;
 
     const s = generateMonthlySummary(month, empType);
-    let html = `<h3>${month}</h3>`;
+
+    let html = `
+        <div class="summary-header">
+            <h3>${month}</h3>
+            <button type="button" class="summary-close" onclick="closeSummary()">Close ✕</button>
+        </div>
+    `;
 
     if (empType === "faculty") {
         html += `
@@ -65,7 +70,6 @@ function renderSummary(month, empType) {
     }
 
     if (empType === "staff") {
-
         const workingDays = calculateWorkingDays(month);
         const type2Limit = Math.floor((workingDays - s.closedHoliday) * STAFF_LATE_TYPE2_PERCENT);
 
@@ -90,5 +94,7 @@ function renderSummary(month, empType) {
 
 function closeSummary() {
     const panel = document.getElementById("summaryPanel");
-    if (panel) panel.style.display = "none";
+    if (!panel) return;
+    panel.innerHTML = "";
+    panel.style.display = "none";
 }

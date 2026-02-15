@@ -79,15 +79,10 @@ function bindCoreActions(ctx) {
         };
 
         handleSaveRecord(payload);
-        renderTable();
-
-        if (monthFilterEl.value) {
-            renderSummary(monthFilterEl.value, empTypeEl.value);
-        }
+        refreshAfterDataMutation(monthFilterEl, empTypeEl);
     });
 
     monthFilterEl.addEventListener("change", function () {
-
         renderTable();
 
         if (!monthFilterEl.value) {
@@ -99,7 +94,6 @@ function bindCoreActions(ctx) {
     });
 
     empTypeEl.addEventListener("change", function () {
-
         renderTable();
 
         if (monthFilterEl.value) {
@@ -129,17 +123,39 @@ function bindImportExportDeleteActions(ctx) {
     const deleteMenu = document.getElementById("deleteMenu");
 
     const importFile = document.getElementById("importFile");
+    const qrImageFile = document.getElementById("qrImageFile");
 
-    importBtn.addEventListener("click", () => toggleMenu(importMenu));
-    exportBtn.addEventListener("click", () => toggleMenu(exportMenu));
-    deleteBtn.addEventListener("click", () => toggleMenu(deleteMenu));
+    importBtn.addEventListener("click", event => {
+        event.stopPropagation();
+        toggleMenu(importMenu);
+    });
+
+    exportBtn.addEventListener("click", event => {
+        event.stopPropagation();
+        toggleMenu(exportMenu);
+    });
+
+    deleteBtn.addEventListener("click", event => {
+        event.stopPropagation();
+        toggleMenu(deleteMenu);
+    });
 
     importMenu.addEventListener("click", function (event) {
         const type = event.target.dataset.type;
         if (!type) return;
 
-        if (type === "csv") importFile.click();
-        if (type === "qr") importQR();
+        if (type === "csv") {
+            importFile.click();
+        }
+
+        if (type === "qr") {
+            const useScanner = confirm("OK: Scan QR with camera\nCancel: Upload QR image file");
+            if (useScanner) {
+                importQRFromScanner();
+            } else {
+                qrImageFile.click();
+            }
+        }
 
         closeAllMenus();
     });
@@ -151,10 +167,18 @@ function bindImportExportDeleteActions(ctx) {
         importCSV(file);
         importFile.value = "";
 
-        renderTable();
-        if (monthFilterEl.value) {
-            renderSummary(monthFilterEl.value, empTypeEl.value);
-        }
+        refreshAfterDataMutation(monthFilterEl, empTypeEl);
+    });
+
+    qrImageFile.addEventListener("change", function () {
+        const file = qrImageFile.files && qrImageFile.files[0];
+        if (!file) return;
+
+        importQRFromFile(file);
+        qrImageFile.value = "";
+
+        // importQRFromFile is async; refresh shortly after decode processing
+        setTimeout(() => refreshAfterDataMutation(monthFilterEl, empTypeEl), 400);
     });
 
     exportMenu.addEventListener("click", function (event) {
@@ -192,14 +216,7 @@ function bindImportExportDeleteActions(ctx) {
             }
         }
 
-        renderTable();
-
-        if (monthFilterEl.value) {
-            renderSummary(monthFilterEl.value, empTypeEl.value);
-        } else {
-            closeSummary();
-        }
-
+        refreshAfterDataMutation(monthFilterEl, empTypeEl);
         closeAllMenus();
     });
 
@@ -208,6 +225,16 @@ function bindImportExportDeleteActions(ctx) {
             closeAllMenus();
         }
     });
+}
+
+function refreshAfterDataMutation(monthFilterEl, empTypeEl) {
+    renderTable();
+
+    if (monthFilterEl.value) {
+        renderSummary(monthFilterEl.value, empTypeEl.value);
+    } else {
+        closeSummary();
+    }
 }
 
 function toggleMenu(menuEl) {

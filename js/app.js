@@ -27,6 +27,9 @@
             renderTable();
         }
 
+        const yearEl = document.getElementById("copyrightYear");
+        if (yearEl) yearEl.textContent = new Date().getFullYear();
+
         const monthFilterEl = document.getElementById("monthFilter");
         const empTypeEl = document.getElementById("empType");
 
