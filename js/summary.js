@@ -25,7 +25,7 @@ function generateMonthlySummary(month, empType) {
     records.forEach(r => {
         if (r.reason === REASON.CLOSED) summary.closedHoliday++;
         if (r.reason === REASON.SPECIAL) summary.specialLeave++;
-        if (r.reason === REASON.PENDING) summary.pending++;
+        if (r.reason === REASON.PENDING_IN || isPendingOutReason(r.reason)) summary.pending++;
 
         if (r.status === STATUS.COMPLIANT) summary.compliant++;
         if (r.status === STATUS.NON_COMPLIANT) summary.nonCompliant++;
@@ -63,7 +63,7 @@ function renderSummary(month, empType) {
             <div>Grace: ${s.grace}</div>
             <div>Relaxation: ${s.relaxation}/${FACULTY_RELAXATION_LIMIT}</div>
             <div>Late Compensation: ${s.lateComp}</div>
-            <div>Pending Punch-Out: ${s.pending}</div>
+            <div>Pending Punch (In/Out): ${s.pending}</div>
             <div>Closed Holiday: ${s.closedHoliday}</div>
             <div>Special Leave: ${s.specialLeave}</div>
         </div>`;
@@ -82,7 +82,7 @@ function renderSummary(month, empType) {
             <div>Relaxation: ${s.relaxation}/${STAFF_RELAXATION_LIMIT}</div>
             <div>Late Compensation Type I: ${s.lateCompTypeI}</div>
             <div>Late Compensation Type II: ${s.lateCompTypeII}/${type2Limit}</div>
-            <div>Pending Punch-Out: ${s.pending}</div>
+            <div>Pending Punch (In/Out): ${s.pending}</div>
             <div>Closed Holiday: ${s.closedHoliday}</div>
             <div>Special Leave: ${s.specialLeave}</div>
         </div>`;
