@@ -21,8 +21,10 @@ function renderTable() {
 
         const tr = document.createElement("tr");
 
-        if (record.reason === REASON.PENDING) {
+        if (record.reason === REASON.MISSING_PUNCH_IN) {
             tr.className = "status-pending";
+        } else if (record.reason === REASON.MISSING_PUNCH_OUT) {
+            tr.className = "status-pending";        
         } else if (record.reason === REASON.CLOSED || record.reason === REASON.SPECIAL) {
             tr.className = "status-neutral";
         } else if (record.status === STATUS.COMPLIANT) {
