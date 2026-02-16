@@ -296,8 +296,16 @@ function handleSaveRecord(payload) {
         isAutoPunchOutMissing: !hasManualOutTime
     };
 
-    const closedHoliday = document.getElementById("closedHoliday").value === "yes";
-    const specialLeave = document.getElementById("specialLeave").value === "yes";
+    const closedHolidayEl = document.getElementById("closedHoliday");
+    const specialLeaveEl = document.getElementById("specialLeave");
+   
+    const closedHoliday = closedHolidayEl ? closedHolidayEl.value === "yes" : false;
+    const specialLeave = specialLeaveEl ? specialLeaveEl.value === "yes" : false;
+
+    if (!payload.inTime && !closedHoliday && !specialLeave) {
+    alert("Punch-In Time is required.");
+    return;
+    }
 
     if (closedHoliday) {
         record.status = STATUS.COMPLIANT;
