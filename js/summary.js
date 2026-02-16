@@ -25,8 +25,7 @@ function generateMonthlySummary(month, empType) {
     records.forEach(r => {
         if (r.reason === REASON.CLOSED) summary.closedHoliday++;
         if (r.reason === REASON.SPECIAL) summary.specialLeave++;
-        if (isMissingInReason(r.reason)) summary.missing++;
-        if (isMissingOutReason(r.reason)) summary.missing++;
+        if (r.reason === "Missing Punch-In/Out") summary.missing++;
 
         if (r.status === STATUS.COMPLIANT) summary.compliant++;
         if (r.status === STATUS.NON_COMPLIANT) summary.nonCompliant++;
