@@ -85,6 +85,11 @@ function initializePickers(monthFilterEl, dateEl, inEl, outEl) {
 
 function bindCoreActions(ctx) {
 
+    if (!ctx) {
+        console.error("bindCoreActions called without context.");
+        return;
+    }
+
     const { empTypeEl, monthFilterEl, dateEl, inEl, outEl, saveBtn } = ctx;
 
     saveBtn.addEventListener("click", function () {
