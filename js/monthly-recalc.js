@@ -48,40 +48,55 @@ function evaluateMonth(records) {
 
         monthRecords.forEach(record => {
 
-            if (record.reason === REASON.CLOSED || record.reason === REASON.SPECIAL) {
-                record.status = STATUS.COMPLIANT;
-                record.hours = 0;
-                return;
-            }
-
-            if (record.isAutoPunchInMissing) {
+            /* ============================================================
+               MISSING PUNCH-IN / PUNCH-OUT HANDLING
+            ============================================================ */
+            
+            const inMin = timeToMinutes(record.inTime);
+            const outMin = timeToMinutes(record.outTime);
+            const REQUIRED_MINUTES = 8.5 * 60;
+            
+            // BOTH missing
+            if (!record.inTime && !record.outTime) {
                 record.status = STATUS.NON_COMPLIANT;
-                record.reason = buildMissingInReason(record.inTime);
-                record.hours = calculateHours(timeToMinutes(record.inTime), timeToMinutes(record.outTime));
+                record.reason = "Missing Punch-In/Out";
+                record.hours = 0;
+                record._rowType = "missing";
                 return;
             }
-
+            
+            // Missing Punch-In
             if (!record.inTime) {
                 record.status = STATUS.NON_COMPLIANT;
-                record.reason = REASON.MINSSING_PUNCH_IN;
+                record.reason = "Missing Punch-In/Out";
                 record.hours = 0;
+                record._rowType = "missing";
                 return;
             }
-
-
-            if (record.isAutoPunchOutMissing) {
+            
+            // Missing Punch-Out → Auto Calculate
+            if (!record.outTime && record.inTime) {
+            
+                const autoOutMin = inMin + REQUIRED_MINUTES;
+            
+                const hh = Math.floor(autoOutMin / 60);
+                const mm = autoOutMin % 60;
+            
+                const autoDate = new Date(1970, 0, 1, hh, mm);
+            
+                record.outTime = autoDate.toLocaleTimeString([], {
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+            
+                record.hours = 8.5;
                 record.status = STATUS.NON_COMPLIANT;
-                record.reason = buildMissingOutReason(record.outTime);
-                record.hours = calculateHours(timeToMinutes(record.inTime), timeToMinutes(record.outTime));
+                record.reason = "Missing Punch-In/Out";
+                record._rowType = "missing";
+            
                 return;
             }
 
-            if (!record.outTime) {
-                record.status = STATUS.NON_COMPLIANT;
-                record.reason = REASON.MISSING_PUNCH_OUT;
-                record.hours = 0;
-                return;
-            }
 
             const evaluated = applyAttendanceRules(
                 record,
