@@ -93,7 +93,7 @@ const REASON = {
 };
 
 function buildMissingInReason(targetInTime) {
-    if (!targetOutTime) return REASON.MISSING_PUNCH_IN;
+    if (!targetInTime) return REASON.MISSING_PUNCH_IN;
     return `${REASON.MISSING_PUNCH_IN} : ${targetInTime}`;
 }
 
