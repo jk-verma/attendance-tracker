@@ -27,15 +27,6 @@
            renderTable();
        }
    
-       // 🔥 MISSING PART
-       if (typeof bindCoreActions === "function") {
-           bindCoreActions();
-       }
-   
-       if (typeof bindImportExportDeleteActions === "function") {
-           bindImportExportDeleteActions();
-       }
-   
        const yearEl = document.getElementById("copyrightYear");
        if (yearEl) yearEl.textContent = new Date().getFullYear();
    
