@@ -54,7 +54,7 @@ function staffBuildResult(hours, status, reason, usedRelaxation = false, usedTyp
     };
 }
 
-function staffToMinutes(timeStr) {
+function timeToMinutes(timeStr) {
     if (!timeStr) return 0;
     const [h, mPart] = timeStr.split(":");
     const [m, period] = mPart.split(" ");
