@@ -2,10 +2,6 @@
 
 Monthly Attendance Punch Tracker — a lightweight, browser-based tool for recording and evaluating daily punch-in / punch-out times for Faculty and Staff employees.
 
-## WhatsApp Marketing Message
-
-> Copy the text below and paste it directly into WhatsApp.
-
 ---
 
 📋 *Monthly Attendance Punch Tracker* 📋
