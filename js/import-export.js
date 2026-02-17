@@ -341,7 +341,10 @@ function processQrPayload(decodedText, successMessage) {
             records = parsed;
         }
 
-        const evaluated = evaluateMonth(records);
+        records.forEach(r => upsertRecord(r));
+
+        const allRecords = getAllRecords();
+        const evaluated = evaluateMonth(allRecords);
         saveAllRecords(evaluated);
 
         if (typeof renderTable === "function") renderTable();
