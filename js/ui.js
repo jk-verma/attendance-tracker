@@ -295,8 +295,9 @@ function handleSaveRecord(payload) {
         record.reason = REASON.MISSING_PUNCH_IN;
     } else if (record.inTime && !record.outTime) {
         const inMin = timeToMinutes(record.inTime);
+        const graceEnd = empType === "staff" ? STAFF_GRACE_END : FACULTY_GRACE_END;
         const standardHours = empType === "staff" ? STAFF_STANDARD_HOURS : FACULTY_STANDARD_HOURS;
-        const targetOutMin = inMin + (standardHours * 60);
+        const targetOutMin = inMin <= graceEnd ? OFFICE_END_MIN : inMin + (standardHours * 60);
         record.status = STATUS.NON_COMPLIANT;
         record.reason = REASON.MISSING_PUNCH_OUT + " | Target: " + minutesToTime(targetOutMin);
     } else if (!record.inTime && !record.outTime) {
