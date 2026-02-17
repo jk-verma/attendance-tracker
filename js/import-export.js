@@ -71,7 +71,9 @@ function importCSV(file, onComplete) {
 function exportQR(records) {
 
     const container = document.getElementById("qrContainer");
+    const readerContainer = document.getElementById("qrReader");
     container.innerHTML = "";
+    readerContainer.innerHTML = "";
 
     if (typeof QRCode === "undefined" || typeof QRCode.toCanvas !== "function") {
         container.innerHTML = "<div>QR library not available for export.</div>";
@@ -99,7 +101,9 @@ function exportQR(records) {
 async function importQRFromScanner(onComplete) {
 
     const readerContainer = document.getElementById("qrReader");
+    const qrContainer = document.getElementById("qrContainer");
     readerContainer.innerHTML = "";
+    qrContainer.innerHTML = "";
 
     // Preferred path: html5-qrcode webcam scanner
     if (typeof Html5Qrcode !== "undefined") {
@@ -110,7 +114,7 @@ async function importQRFromScanner(onComplete) {
     // Secondary path: html5-qrcode scanner widget
     if (typeof Html5QrcodeScanner !== "undefined") {
         const scanner = new Html5QrcodeScanner("qrReader", {
-            fps: 10,
+            fps: 5,
             qrbox: function (viewfinderWidth, viewfinderHeight) {
                 const size = Math.min(viewfinderWidth, viewfinderHeight);
                 return { width: Math.floor(size * 0.7), height: Math.floor(size * 0.7) };
@@ -212,7 +216,7 @@ async function startHtml5QrCameraScan(onComplete) {
         await html5QrCode.start(
             preferred.id,
             {
-                fps: 10,
+                fps: 5,
                 qrbox: function (viewfinderWidth, viewfinderHeight) {
                     const size = Math.min(viewfinderWidth, viewfinderHeight);
                     return { width: Math.floor(size * 0.7), height: Math.floor(size * 0.7) };
@@ -254,7 +258,9 @@ function importQRFromFile(file, onComplete) {
 
     if (typeof Html5Qrcode !== "undefined") {
         const readerContainer = document.getElementById("qrReader");
+        const qrContainer = document.getElementById("qrContainer");
         readerContainer.innerHTML = "";
+        qrContainer.innerHTML = "";
 
         const html5QrCode = new Html5Qrcode("qrReader");
 
