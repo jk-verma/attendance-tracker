@@ -85,6 +85,7 @@ function evaluateMonth(records) {
             if (evaluated.usedType2) type2Count++;
         });
 
+        
         result.push(...groupRecords);
     });
 
