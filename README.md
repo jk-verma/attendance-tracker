@@ -10,12 +10,19 @@ Tired of messy spreadsheets and manual attendance tracking? Try the *Monthly Att
 
 ✅ *Key Features*
 • Record daily Punch-In & Punch-Out times
+
 • Automatic compliance check (Compliant / Non-Compliant)
+
 • Separate rule engines for Faculty & Staff
+
 • Grace period, Late Compensation & Semimonthly Relaxation — all handled automatically
+
 • Monthly summary with detailed breakdowns
+
 • Mark Closed Holidays & Special Leaves
+
 • Import / Export records via QR Code or CSV
+
 • Works offline — all data stays in your browser
 
 📱 *How It Works*
