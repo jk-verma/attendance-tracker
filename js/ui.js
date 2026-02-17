@@ -294,8 +294,11 @@ function handleSaveRecord(payload) {
         record.status = STATUS.NON_COMPLIANT;
         record.reason = REASON.MISSING_PUNCH_IN;
     } else if (record.inTime && !record.outTime) {
+        const inMin = timeToMinutes(record.inTime);
+        const standardHours = empType === "staff" ? STAFF_STANDARD_HOURS : FACULTY_STANDARD_HOURS;
+        const targetOutMin = inMin + (standardHours * 60);
         record.status = STATUS.NON_COMPLIANT;
-        record.reason = REASON.MISSING_PUNCH_OUT + " | Target: " + minutesToTime(OFFICE_END_MIN);
+        record.reason = REASON.MISSING_PUNCH_OUT + " | Target: " + minutesToTime(targetOutMin);
     } else if (!record.inTime && !record.outTime) {
         record.status = STATUS.NON_COMPLIANT;
         record.reason = REASON.MISSING_PUNCH_IN;
