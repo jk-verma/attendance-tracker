@@ -14,8 +14,8 @@ const STAFF_CONFIG = {
 
 function applyStaffRules(record, relaxationCount, type2Count, type2Limit) {
 
-    const inMin = staffToMinutes(record.inTime);
-    const outMin = staffToMinutes(record.outTime);
+    const inMin = timeToMinutes(record.inTime); // From config.js
+    const outMin = timeToMinutes(record.outTime); // From config.js
     const workedHours = (outMin - inMin) / 60;
 
     if (inMin <= STAFF_CONFIG.OFFICE_START && outMin >= STAFF_CONFIG.OFFICE_END) {
@@ -54,3 +54,18 @@ function staffBuildResult(hours, status, reason, usedRelaxation = false, usedTyp
     };
 }
 
+<<<<<<< Updated upstream
+=======
+// function staffToMinutes(timeStr) {
+//     if (!timeStr) return 0;
+//     const [h, mPart] = timeStr.split(":");
+//     const [m, period] = mPart.split(" ");
+//     let hour = parseInt(h, 10);
+//     const minute = parseInt(m, 10);
+
+//     if (period === "PM" && hour !== 12) hour += 12;
+//     if (period === "AM" && hour === 12) hour = 0;
+
+//     return hour * 60 + minute;
+// }
+>>>>>>> Stashed changes
