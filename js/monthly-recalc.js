@@ -22,80 +22,60 @@ function applyAttendanceRules(record, relaxationCount, type2Count, type2Limit) {
 }
 
 function evaluateMonth(records) {
-
     if (!Array.isArray(records)) return [];
 
-    records.sort((a, b) => a.date.localeCompare(b.date));
+    const result = [];
 
-    const grouped = {};
-
+    // Group records by empType and month
+    const groups = {};
     records.forEach(r => {
-        const month = r.date.slice(0, 7);
-        if (!grouped[month]) grouped[month] = [];
-        grouped[month].push(r);
+        const key = `${r.empType}-${getMonthKey(r.date)}`;
+        if (!groups[key]) groups[key] = [];
+        groups[key].push(r);
     });
 
-    Object.keys(grouped).forEach(month => {
-
-        const monthRecords = grouped[month];
+    Object.keys(groups).forEach(key => {
+        const groupRecords = groups[key];
+        const [empType, month] = key.split('-');
 
         let relaxationCount = 0;
         let type2Count = 0;
 
         const workingDays = calculateWorkingDays(month);
-        const closedHolidays = monthRecords.filter(r => r.reason === REASON.CLOSED).length;
-        const type2Limit = Math.floor((workingDays - closedHolidays) * STAFF_LATE_TYPE2_PERCENT);
+        const closedHolidays = groupRecords.filter(r => r.reason === REASON.CLOSED).length;
+        const type2Limit = empType === "staff"
+            ? Math.floor((workingDays - closedHolidays) * STAFF_LATE_TYPE2_PERCENT)
+            : 0;
 
-        monthRecords.forEach(record => {
-
-            /* ============================================================
-               MISSING PUNCH-IN / PUNCH-OUT HANDLING
-            ============================================================ */
-            
-            const inMin = timeToMinutes(record.inTime);
-            const outMin = timeToMinutes(record.outTime);
-            const REQUIRED_MINUTES = 8.5 * 60;
-            
-            // ===== Missing Punch-In OR Punch-Out =====
-            if (!record.inTime || !record.outTime) {
-            
-                record.status = STATUS.NON_COMPLIANT;
-                record.reason = "Missing Punch-In/Out";
-            
-                if (record.inTime && record.outTime) {
-                    record.hours = calculateHours(
-                        timeToMinutes(record.inTime),
-                        timeToMinutes(record.outTime)
-                    );
-                } else if (record.inTime && !record.outTime) {
-            
-                    // Auto calculate Out time if missing
-                    const requiredHours =
-                        record.empType === "staff"
-                            ? STAFF_STANDARD_HOURS
-                            : FACULTY_STANDARD_HOURS;
-            
-                    const requiredMinutes = Math.round(requiredHours * 60);
-                    const inMin = timeToMinutes(record.inTime);
-                    const autoOut = minutesToTime(inMin + requiredMinutes);
-            
-                    record.outTime = autoOut;
-                    record.hours = requiredHours;
-                } else {
-                    record.hours = 0;
-                }
-            
+        groupRecords.forEach(record => {
+            if (record.reason === REASON.CLOSED || record.reason === REASON.SPECIAL) {
+                record.status = STATUS.COMPLIANT;
+                record.hours = 0;
                 return;
             }
 
+            if (!record.outTime) {
+                record.status = STATUS.NON_COMPLIANT;
+                record.reason = REASON.PENDING;
+                record.hours = 0;
+                return;
+            }
 
+            let evaluated;
 
-            const evaluated = applyAttendanceRules(
-                record,
-                relaxationCount,
-                type2Count,
-                type2Limit
-            );
+            if (empType === "faculty") {
+                evaluated = applyFacultyRules(record, relaxationCount);
+            } else if (empType === "staff") {
+                evaluated = applyStaffRules(record, relaxationCount, type2Count, type2Limit);
+            } else {
+                evaluated = {
+                    hours: 0,
+                    status: STATUS.NON_COMPLIANT,
+                    reason: REASON.REJECT,
+                    usedRelaxation: false,
+                    usedType2: false
+                };
+            }
 
             record.hours = evaluated.hours;
             record.status = evaluated.status;
@@ -104,10 +84,13 @@ function evaluateMonth(records) {
             if (evaluated.usedRelaxation) relaxationCount++;
             if (evaluated.usedType2) type2Count++;
         });
+
+        result.push(...groupRecords);
     });
 
-    return records;
+    return result.sort((a, b) => a.date.localeCompare(b.date));
 }
+
 
 function calculateWorkingDays(month) {
 
