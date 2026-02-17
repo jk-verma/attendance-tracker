@@ -14,8 +14,8 @@ const FACULTY_CONFIG = {
 
 function applyFacultyRules(record, relaxationCount) {
 
-    const inMin = facultyToMinutes(record.inTime);
-    const outMin = facultyToMinutes(record.outTime);
+    const inMin = timeToMinutes(record.inTime); // from config.js
+    const outMin = timeToMinutes(record.outTime); // from config.js
     const workedHours = (outMin - inMin) / 60;
 
     if (inMin <= FACULTY_CONFIG.OFFICE_START && outMin >= FACULTY_CONFIG.OFFICE_END) {
@@ -48,17 +48,4 @@ function facultyBuildResult(hours, status, reason, usedRelaxation = false) {
         usedRelaxation,
         usedType2: false
     };
-}
-
-function timeToMinutes(timeStr) {
-    if (!timeStr) return 0;
-    const [h, mPart] = timeStr.split(":");
-    const [m, period] = mPart.split(" ");
-    let hour = parseInt(h, 10);
-    const minute = parseInt(m, 10);
-
-    if (period === "PM" && hour !== 12) hour += 12;
-    if (period === "AM" && hour === 12) hour = 0;
-
-    return hour * 60 + minute;
 }
