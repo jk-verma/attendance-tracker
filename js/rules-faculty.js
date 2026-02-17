@@ -26,15 +26,15 @@ function applyFacultyRules(record, relaxationCount) {
         return facultyBuildResult(workedHours, STATUS.COMPLIANT, REASON.GRACE);
     }
 
+    if (inMin > FACULTY_CONFIG.GRACE_END && inMin <= FACULTY_CONFIG.MAX_IN && workedHours >= FACULTY_CONFIG.MIN_FULL_HOURS) {
+        return facultyBuildResult(workedHours, STATUS.COMPLIANT, REASON.LATE_COMP);
+    }
+
     const lateRelax = inMin <= FACULTY_CONFIG.RELAX_LIMIT && outMin >= FACULTY_CONFIG.OFFICE_END;
     const earlyRelax = inMin <= FACULTY_CONFIG.OFFICE_START && outMin >= (FACULTY_CONFIG.OFFICE_END - 60);
 
     if (relaxationCount < FACULTY_RELAXATION_LIMIT && (lateRelax || earlyRelax) && workedHours >= FACULTY_CONFIG.MIN_RELAX_HOURS) {
         return facultyBuildResult(workedHours, STATUS.COMPLIANT, REASON.SEMI_RELAX, true);
-    }
-
-    if (inMin > FACULTY_CONFIG.GRACE_END && inMin <= FACULTY_CONFIG.MAX_IN && workedHours >= FACULTY_CONFIG.MIN_FULL_HOURS) {
-        return facultyBuildResult(workedHours, STATUS.COMPLIANT, REASON.LATE_COMP);
     }
 
     return facultyBuildResult(workedHours, STATUS.NON_COMPLIANT, REASON.REJECT);

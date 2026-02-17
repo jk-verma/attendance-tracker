@@ -26,19 +26,19 @@ function applyStaffRules(record, relaxationCount, type2Count, type2Limit) {
         return staffBuildResult(workedHours, STATUS.COMPLIANT, REASON.GRACE);
     }
 
-    const lateRelax = inMin <= STAFF_CONFIG.TYPE2_END && outMin >= STAFF_CONFIG.OFFICE_END;
-    const earlyRelax = inMin <= STAFF_CONFIG.OFFICE_START && outMin >= (STAFF_CONFIG.OFFICE_END - 60);
-
-    if (relaxationCount < STAFF_RELAXATION_LIMIT && (lateRelax || earlyRelax) && workedHours >= STAFF_CONFIG.MIN_RELAX_HOURS) {
-        return staffBuildResult(workedHours, STATUS.COMPLIANT, REASON.SEMI_RELAX, true);
-    }
-
     if (inMin > STAFF_CONFIG.GRACE_END && inMin <= STAFF_CONFIG.TYPE1_END && workedHours >= STAFF_CONFIG.MIN_FULL_HOURS) {
         return staffBuildResult(workedHours, STATUS.COMPLIANT, REASON.LATE_COMP_TYPE1);
     }
 
     if (inMin > STAFF_CONFIG.TYPE1_END && inMin <= STAFF_CONFIG.TYPE2_END && workedHours >= STAFF_CONFIG.MIN_FULL_HOURS && type2Count < type2Limit) {
         return staffBuildResult(workedHours, STATUS.COMPLIANT, REASON.LATE_COMP_TYPE2, false, true);
+    }
+
+    const lateRelax = inMin <= STAFF_CONFIG.TYPE2_END && outMin >= STAFF_CONFIG.OFFICE_END;
+    const earlyRelax = inMin <= STAFF_CONFIG.OFFICE_START && outMin >= (STAFF_CONFIG.OFFICE_END - 60);
+
+    if (relaxationCount < STAFF_RELAXATION_LIMIT && (lateRelax || earlyRelax) && workedHours >= STAFF_CONFIG.MIN_RELAX_HOURS) {
+        return staffBuildResult(workedHours, STATUS.COMPLIANT, REASON.SEMI_RELAX, true);
     }
 
     return staffBuildResult(workedHours, STATUS.NON_COMPLIANT, REASON.REJECT);
