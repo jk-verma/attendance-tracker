@@ -61,6 +61,7 @@ function initializePickers(monthFilterEl, dateEl, inEl, outEl) {
         noCalendar: true,
         dateFormat: "h:i K",
         time_24hr: false,
+        defaultDate: "09:00 AM",
         allowInput: true,
         clickOpens: true,
         disableMobile: true
