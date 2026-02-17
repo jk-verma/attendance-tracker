@@ -70,18 +70,30 @@ function importCSV(file, onComplete) {
 
 function exportQR(records) {
 
-    const payload = JSON.stringify(records);
     const container = document.getElementById("qrContainer");
     container.innerHTML = "";
 
-    if (typeof QRCode !== "undefined" && typeof QRCode.toCanvas === "function") {
-        QRCode.toCanvas(payload, { width: 250 }, function (err, canvas) {
-            if (!err) container.appendChild(canvas);
-        });
+    if (typeof QRCode === "undefined" || typeof QRCode.toCanvas !== "function") {
+        container.innerHTML = "<div>QR library not available for export.</div>";
         return;
     }
 
-    container.innerHTML = "<div>QR library not available for export.</div>";
+    const compact = records.map(r => {
+        const entry = [r.date || "", r.empType || "faculty", r.inTime || "", r.outTime || ""];
+        if (r.reason === REASON.CLOSED) entry.push("CH");
+        else if (r.reason === REASON.SPECIAL) entry.push("SL");
+        return entry;
+    });
+
+    const payload = JSON.stringify(compact);
+
+    QRCode.toCanvas(payload, { width: 250, errorCorrectionLevel: "L" }, function (err, canvas) {
+        if (err) {
+            container.innerHTML = "<div style='color:#c62828'>QR code generation failed. Too many records for a single QR code. Try exporting fewer records using Filter Month.</div>";
+            return;
+        }
+        container.appendChild(canvas);
+    });
 }
 
 async function importQRFromScanner(onComplete) {
@@ -302,7 +314,34 @@ function processQrPayload(decodedText, successMessage) {
             return false;
         }
 
-        const evaluated = evaluateMonth(parsed);
+        let records;
+
+        if (parsed.length > 0 && Array.isArray(parsed[0])) {
+            records = parsed.map(entry => {
+                const rec = {
+                    date: entry[0] || "",
+                    empType: entry[1] || "faculty",
+                    empLabel: (entry[1] || "faculty") === "staff" ? "Staff" : "Faculty",
+                    inTime: entry[2] || "",
+                    outTime: entry[3] || "",
+                    hours: 0,
+                    status: "",
+                    reason: ""
+                };
+                if (entry[4] === "CH") {
+                    rec.status = STATUS.COMPLIANT;
+                    rec.reason = REASON.CLOSED;
+                } else if (entry[4] === "SL") {
+                    rec.status = STATUS.COMPLIANT;
+                    rec.reason = REASON.SPECIAL;
+                }
+                return rec;
+            });
+        } else {
+            records = parsed;
+        }
+
+        const evaluated = evaluateMonth(records);
         saveAllRecords(evaluated);
 
         if (typeof renderTable === "function") renderTable();
