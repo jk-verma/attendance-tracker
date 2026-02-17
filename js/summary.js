@@ -13,6 +13,8 @@ function generateMonthlySummary(month, empType) {
         compliant: 0,
         nonCompliant: 0,
         pending: 0,
+        missingPunchIn: 0,
+        missingPunchOut: 0,
         grace: 0,
         relaxation: 0,
         lateComp: 0,
@@ -26,6 +28,8 @@ function generateMonthlySummary(month, empType) {
         if (r.reason === REASON.CLOSED) summary.closedHoliday++;
         if (r.reason === REASON.SPECIAL) summary.specialLeave++;
         if (r.reason === REASON.PENDING) summary.pending++;
+        if (r.reason === REASON.MISSING_PUNCH_IN) summary.missingPunchIn++;
+        if (r.reason && r.reason.startsWith(REASON.MISSING_PUNCH_OUT)) summary.missingPunchOut++;
 
         if (r.status === STATUS.COMPLIANT) summary.compliant++;
         if (r.status === STATUS.NON_COMPLIANT) summary.nonCompliant++;
@@ -63,6 +67,8 @@ function renderSummary(month, empType) {
             <div>Grace: ${s.grace}</div>
             <div>Relaxation: ${s.relaxation}/${FACULTY_RELAXATION_LIMIT}</div>
             <div>Late Compensation: ${s.lateComp}</div>
+            <div>Missing Punch-In: ${s.missingPunchIn}</div>
+            <div>Missing Punch-Out: ${s.missingPunchOut}</div>
             <div>Pending Punch-Out: ${s.pending}</div>
             <div>Closed Holiday: ${s.closedHoliday}</div>
             <div>Special Leave: ${s.specialLeave}</div>
@@ -82,6 +88,8 @@ function renderSummary(month, empType) {
             <div>Relaxation: ${s.relaxation}/${STAFF_RELAXATION_LIMIT}</div>
             <div>Late Compensation Type I: ${s.lateCompTypeI}</div>
             <div>Late Compensation Type II: ${s.lateCompTypeII}/${type2Limit}</div>
+            <div>Missing Punch-In: ${s.missingPunchIn}</div>
+            <div>Missing Punch-Out: ${s.missingPunchOut}</div>
             <div>Pending Punch-Out: ${s.pending}</div>
             <div>Closed Holiday: ${s.closedHoliday}</div>
             <div>Special Leave: ${s.specialLeave}</div>

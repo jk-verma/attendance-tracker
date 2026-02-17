@@ -23,7 +23,7 @@ function renderTable() {
 
         if (record.reason === REASON.MISSING_PUNCH_IN) {
             tr.className = "status-pending";
-        } else if (record.reason === REASON.MISSING_PUNCH_OUT) {
+        } else if (record.reason && record.reason.startsWith(REASON.MISSING_PUNCH_OUT)) {
             tr.className = "status-pending";        
         } else if (record.reason === REASON.CLOSED || record.reason === REASON.SPECIAL) {
             tr.className = "status-neutral";

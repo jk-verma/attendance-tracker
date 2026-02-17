@@ -54,9 +54,23 @@ function evaluateMonth(records) {
                 return;
             }
 
+            if (!record.inTime && !record.outTime) {
+                record.status = STATUS.NON_COMPLIANT;
+                record.reason = REASON.MISSING_PUNCH_IN;
+                record.hours = 0;
+                return;
+            }
+
+            if (!record.inTime) {
+                record.status = STATUS.NON_COMPLIANT;
+                record.reason = REASON.MISSING_PUNCH_IN;
+                record.hours = 0;
+                return;
+            }
+
             if (!record.outTime) {
                 record.status = STATUS.NON_COMPLIANT;
-                record.reason = REASON.PENDING;
+                record.reason = REASON.MISSING_PUNCH_OUT + " | Target: " + minutesToTime(OFFICE_END_MIN);
                 record.hours = 0;
                 return;
             }

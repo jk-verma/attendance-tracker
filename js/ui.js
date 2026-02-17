@@ -294,9 +294,15 @@ function handleSaveRecord(payload) {
     } else if (specialLeave) {
         record.status = STATUS.COMPLIANT;
         record.reason = REASON.SPECIAL;
-    } else if (!record.outTime) {
+    } else if (!record.inTime && record.outTime) {
         record.status = STATUS.NON_COMPLIANT;
-        record.reason = REASON.PENDING;
+        record.reason = REASON.MISSING_PUNCH_IN;
+    } else if (record.inTime && !record.outTime) {
+        record.status = STATUS.NON_COMPLIANT;
+        record.reason = REASON.MISSING_PUNCH_OUT + " | Target: " + minutesToTime(OFFICE_END_MIN);
+    } else if (!record.inTime && !record.outTime) {
+        record.status = STATUS.NON_COMPLIANT;
+        record.reason = REASON.MISSING_PUNCH_IN;
     }
 
     upsertRecord(record);

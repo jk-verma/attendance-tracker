@@ -87,6 +87,8 @@ const REASON = {
     LATE_COMP_TYPE2: "Late Compensation—Type II",
     REJECT: "REJECT",
     PENDING: "Pending Punch-Out",
+    MISSING_PUNCH_IN: "Missing Punch-In",
+    MISSING_PUNCH_OUT: "Missing Punch-Out",
     CLOSED: "Closed Holiday",
     SPECIAL: "Special Leave"
 };
