@@ -10,7 +10,7 @@ function exportCSV(records, filename = "attendance_export.csv") {
         csv += `${r.date || ""},${r.empLabel || ""},${r.inTime || ""},${r.outTime || ""},${r.hours || ""},${r.status || ""},${r.reason || ""}\n`;
     });
 
-    const blob = new Blob([csv], { type: "text/csv" });
+    const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8" });
     const link = document.createElement("a");
     link.href = URL.createObjectURL(blob);
     link.download = filename;
@@ -100,7 +100,7 @@ async function importQRFromScanner(onComplete) {
         const scanner = new Html5QrcodeScanner("qrReader", {
             fps: 10,
             qrbox: function (viewfinderWidth, viewfinderHeight) {
-                var size = Math.min(viewfinderWidth, viewfinderHeight);
+                const size = Math.min(viewfinderWidth, viewfinderHeight);
                 return { width: Math.floor(size * 0.7), height: Math.floor(size * 0.7) };
             }
         });
@@ -202,7 +202,7 @@ async function startHtml5QrCameraScan(onComplete) {
             {
                 fps: 10,
                 qrbox: function (viewfinderWidth, viewfinderHeight) {
-                    var size = Math.min(viewfinderWidth, viewfinderHeight);
+                    const size = Math.min(viewfinderWidth, viewfinderHeight);
                     return { width: Math.floor(size * 0.7), height: Math.floor(size * 0.7) };
                 }
             },
