@@ -74,7 +74,7 @@ function renderSummary(month, empType) {
 
     if (empType === "staff") {
         const workingDays = calculateWorkingDays(month);
-        const type2Limit = Math.floor((workingDays - s.closedHoliday) * STAFF_LATE_TYPE2_PERCENT);
+        const type2Limit = Math.ceil((workingDays - s.closedHoliday) * STAFF_LATE_TYPE2_PERCENT);
 
         html += `
         <div class="summary-box">

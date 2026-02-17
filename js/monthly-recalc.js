@@ -44,7 +44,7 @@ function evaluateMonth(records) {
 
         const workingDays = calculateWorkingDays(month);
         const closedHolidays = monthRecords.filter(r => r.reason === REASON.CLOSED).length;
-        const type2Limit = Math.floor((workingDays - closedHolidays) * STAFF_LATE_TYPE2_PERCENT);
+        const type2Limit = Math.ceil((workingDays - closedHolidays) * STAFF_LATE_TYPE2_PERCENT);
 
         monthRecords.forEach(record => {
 
