@@ -9,11 +9,13 @@ function renderTable() {
 
     const selectedMonth = document.getElementById("monthFilter").value;
 
+    const now = new Date();
+    const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+    const filterMonth = selectedMonth || currentMonth;
+
     let records = getAllRecords();
 
-    if (selectedMonth) {
-        records = records.filter(r => r.date.startsWith(selectedMonth));
-    }
+    records = records.filter(r => r.date.startsWith(filterMonth));
 
     tbody.innerHTML = "";
 
