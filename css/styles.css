@@ -25,13 +25,41 @@ body {
 }
 
 /* ==============================
+   Title Bar & User Guide Link
+============================== */
+
+.title-bar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    margin-bottom: 25px;
+}
+
+.title-bar h2 {
+    margin: 0;
+}
+
+.guide-link {
+    position: absolute;
+    right: 0;
+    font-size: 14px;
+    color: #1976d2;
+    text-decoration: none;
+    font-weight: 600;
+}
+
+.guide-link:hover {
+    text-decoration: underline;
+}
+
+/* ==============================
    Heading
 ============================== */
 
 h2 {
     text-align: center;
     color: #0d47a1;
-    margin-bottom: 25px;
 }
 
 /* ==============================
@@ -222,6 +250,11 @@ th {
         font-size: 12px;
         padding: 6px;
     }
+
+    .guide-link,
+    .guide-back-link {
+        font-size: 12px;
+    }
 }
 
 .summary-panel {
@@ -249,6 +282,70 @@ th {
     min-width: 96px;
     padding: 0 12px;
     background: #1565c0;
+}
+
+/* ==============================
+   User Guide Page
+============================== */
+
+.guide-header {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    margin-bottom: 25px;
+}
+
+.guide-header h2 {
+    margin: 0;
+}
+
+.guide-back-link {
+    position: absolute;
+    left: 0;
+    font-size: 14px;
+    color: #1976d2;
+    text-decoration: none;
+    font-weight: 600;
+}
+
+.guide-back-link:hover {
+    text-decoration: underline;
+}
+
+.guide-section {
+    margin-bottom: 24px;
+}
+
+.guide-section h3 {
+    color: #0d47a1;
+    margin-bottom: 8px;
+}
+
+.guide-section p,
+.guide-section li {
+    font-size: 14px;
+    line-height: 1.6;
+    color: #333;
+}
+
+.guide-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 8px;
+}
+
+.guide-table th,
+.guide-table td {
+    text-align: left;
+    padding: 8px;
+    border: 1px solid #ccc;
+    font-size: 13px;
+}
+
+.guide-table th {
+    background: #e3f2fd;
+    font-weight: 600;
 }
 
 .app-footer {
