@@ -62,7 +62,7 @@ function initializePickers(monthFilterEl, dateEl, inEl, outEl) {
         dateFormat: "h:i K",
         time_24hr: false,
         defaultDate: "09:00 AM",
-        allowInput: false,
+        allowInput: true,
         clickOpens: true,
         disableMobile: true
     });
@@ -73,7 +73,7 @@ function initializePickers(monthFilterEl, dateEl, inEl, outEl) {
         dateFormat: "h:i K",
         time_24hr: false,
         defaultDate: "05:30 PM",
-        allowInput: false,
+        allowInput: true,
         clickOpens: true,
         disableMobile: true
     });
