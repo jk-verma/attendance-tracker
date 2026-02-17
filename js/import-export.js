@@ -10,7 +10,7 @@ function exportCSV(records, filename = "attendance_export.csv") {
         csv += `${r.date || ""},${r.empLabel || ""},${r.inTime || ""},${r.outTime || ""},${r.hours || ""},${r.status || ""},${r.reason || ""}\n`;
     });
 
-    const blob = new Blob([csv], { type: "text/csv" });
+    const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8" });
     const link = document.createElement("a");
     link.href = URL.createObjectURL(blob);
     link.download = filename;
@@ -70,24 +70,40 @@ function importCSV(file, onComplete) {
 
 function exportQR(records) {
 
-    const payload = JSON.stringify(records);
     const container = document.getElementById("qrContainer");
+    const readerContainer = document.getElementById("qrReader");
     container.innerHTML = "";
+    readerContainer.innerHTML = "";
 
-    if (typeof QRCode !== "undefined" && typeof QRCode.toCanvas === "function") {
-        QRCode.toCanvas(payload, { width: 250 }, function (err, canvas) {
-            if (!err) container.appendChild(canvas);
-        });
+    if (typeof QRCode === "undefined" || typeof QRCode.toCanvas !== "function") {
+        container.innerHTML = "<div>QR library not available for export.</div>";
         return;
     }
 
-    container.innerHTML = "<div>QR library not available for export.</div>";
+    const compact = records.map(r => {
+        const entry = [r.date || "", r.empType || "faculty", r.inTime || "", r.outTime || ""];
+        if (r.reason === REASON.CLOSED) entry.push("CH");
+        else if (r.reason === REASON.SPECIAL) entry.push("SL");
+        return entry;
+    });
+
+    const payload = JSON.stringify(compact);
+
+    QRCode.toCanvas(payload, { width: 250, errorCorrectionLevel: "L" }, function (err, canvas) {
+        if (err) {
+            container.innerHTML = "<div style='color:#c62828'>QR code generation failed. Too many records for a single QR code. Try exporting fewer records using Filter Month.</div>";
+            return;
+        }
+        container.appendChild(canvas);
+    });
 }
 
 async function importQRFromScanner(onComplete) {
 
     const readerContainer = document.getElementById("qrReader");
+    const qrContainer = document.getElementById("qrContainer");
     readerContainer.innerHTML = "";
+    qrContainer.innerHTML = "";
 
     // Preferred path: html5-qrcode webcam scanner
     if (typeof Html5Qrcode !== "undefined") {
@@ -97,7 +113,13 @@ async function importQRFromScanner(onComplete) {
 
     // Secondary path: html5-qrcode scanner widget
     if (typeof Html5QrcodeScanner !== "undefined") {
-        const scanner = new Html5QrcodeScanner("qrReader", { fps: 10, qrbox: 250 });
+        const scanner = new Html5QrcodeScanner("qrReader", {
+            fps: 5,
+            qrbox: function (viewfinderWidth, viewfinderHeight) {
+                const size = Math.min(viewfinderWidth, viewfinderHeight);
+                return { width: Math.floor(size * 0.7), height: Math.floor(size * 0.7) };
+            }
+        });
 
         scanner.render(function (decodedText) {
             const ok = processQrPayload(decodedText, "QR Imported & Recalculated");
@@ -116,7 +138,7 @@ async function importQRFromScanner(onComplete) {
 
     readerContainer.innerHTML = `
         <div style="margin-bottom:8px">Fallback webcam scanner active. Point camera at QR code.</div>
-        <video id="qrFallbackVideo" autoplay playsinline style="width:300px;border:1px solid #ccc"></video>
+        <video id="qrFallbackVideo" autoplay playsinline style="width:100%;max-width:300px;border:1px solid #ccc"></video>
         <button id="qrFallbackStop" style="margin-top:8px">Stop Scan</button>
     `;
 
@@ -174,7 +196,7 @@ async function startHtml5QrCameraScan(onComplete) {
     const readerContainer = document.getElementById("qrReader");
     readerContainer.innerHTML = `
         <div style="margin-bottom:8px">Webcam scanner active. Point camera at QR code.</div>
-        <div id="qrReaderCamera" style="width:300px"></div>
+        <div id="qrReaderCamera" style="width:100%"></div>
         <button id="qrCameraStop" style="margin-top:8px">Stop Scan</button>
     `;
 
@@ -193,7 +215,13 @@ async function startHtml5QrCameraScan(onComplete) {
 
         await html5QrCode.start(
             preferred.id,
-            { fps: 10, qrbox: 250 },
+            {
+                fps: 5,
+                qrbox: function (viewfinderWidth, viewfinderHeight) {
+                    const size = Math.min(viewfinderWidth, viewfinderHeight);
+                    return { width: Math.floor(size * 0.7), height: Math.floor(size * 0.7) };
+                }
+            },
             (decodedText) => {
                 const ok = processQrPayload(decodedText, "QR Imported & Recalculated");
                 html5QrCode.stop().then(() => html5QrCode.clear()).catch(() => {});
@@ -230,7 +258,9 @@ function importQRFromFile(file, onComplete) {
 
     if (typeof Html5Qrcode !== "undefined") {
         const readerContainer = document.getElementById("qrReader");
+        const qrContainer = document.getElementById("qrContainer");
         readerContainer.innerHTML = "";
+        qrContainer.innerHTML = "";
 
         const html5QrCode = new Html5Qrcode("qrReader");
 
@@ -290,7 +320,37 @@ function processQrPayload(decodedText, successMessage) {
             return false;
         }
 
-        const evaluated = evaluateMonth(parsed);
+        let records;
+
+        if (parsed.length > 0 && Array.isArray(parsed[0])) {
+            records = parsed.map(entry => {
+                const rec = {
+                    date: entry[0] || "",
+                    empType: entry[1] || "faculty",
+                    empLabel: (entry[1] || "faculty") === "staff" ? "Staff" : "Faculty",
+                    inTime: entry[2] || "",
+                    outTime: entry[3] || "",
+                    hours: 0,
+                    status: "",
+                    reason: ""
+                };
+                if (entry[4] === "CH") {
+                    rec.status = STATUS.COMPLIANT;
+                    rec.reason = REASON.CLOSED;
+                } else if (entry[4] === "SL") {
+                    rec.status = STATUS.COMPLIANT;
+                    rec.reason = REASON.SPECIAL;
+                }
+                return rec;
+            });
+        } else {
+            records = parsed;
+        }
+
+        records.forEach(r => upsertRecord(r));
+
+        const allRecords = getAllRecords();
+        const evaluated = evaluateMonth(allRecords);
         saveAllRecords(evaluated);
 
         if (typeof renderTable === "function") renderTable();

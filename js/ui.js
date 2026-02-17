@@ -82,6 +82,8 @@ function initializePickers(monthFilterEl, dateEl, inEl, outEl) {
 function bindCoreActions(ctx) {
 
     const { empTypeEl, monthFilterEl, dateEl, inEl, outEl, saveBtn } = ctx;
+    const closedHolidayEl = document.getElementById("closedHoliday");
+    const specialLeaveEl = document.getElementById("specialLeave");
 
     saveBtn.addEventListener("click", function () {
 
@@ -115,13 +117,45 @@ function bindCoreActions(ctx) {
         }
     });
 
-    inEl.addEventListener("focus", function () {
-        if (!inEl.value && inEl._flatpickr) inEl._flatpickr.setDate("09:00 AM", false);
-    });
-
     outEl.addEventListener("focus", function () {
         if (!outEl.value && outEl._flatpickr) outEl._flatpickr.setDate("05:30 PM", false);
     });
+
+    if (closedHolidayEl) {
+        closedHolidayEl.addEventListener("change", function () {
+            if (closedHolidayEl.value === "yes") {
+                if (specialLeaveEl) specialLeaveEl.value = "no";
+                clearPunchFields(inEl, outEl);
+            } else {
+                restorePunchDefaults(inEl, outEl);
+            }
+        });
+    }
+
+    if (specialLeaveEl) {
+        specialLeaveEl.addEventListener("change", function () {
+            if (specialLeaveEl.value === "yes") {
+                if (closedHolidayEl) closedHolidayEl.value = "no";
+                clearPunchFields(inEl, outEl);
+            } else {
+                restorePunchDefaults(inEl, outEl);
+            }
+        });
+    }
+}
+
+function clearPunchFields(inEl, outEl) {
+    if (inEl._flatpickr) inEl._flatpickr.clear();
+    else inEl.value = "";
+    if (outEl._flatpickr) outEl._flatpickr.clear();
+    else outEl.value = "";
+}
+
+function restorePunchDefaults(inEl, outEl) {
+    if (inEl._flatpickr) inEl._flatpickr.setDate("09:00 AM", false);
+    else inEl.value = "09:00 AM";
+    if (outEl._flatpickr) outEl._flatpickr.setDate("05:30 PM", false);
+    else outEl.value = "05:30 PM";
 }
 
 function bindImportExportDeleteActions(ctx) {
@@ -289,14 +323,27 @@ function handleSaveRecord(payload) {
     const specialLeave = document.getElementById("specialLeave").value === "yes";
 
     if (closedHoliday) {
+        record.inTime = "";
+        record.outTime = "";
         record.status = STATUS.COMPLIANT;
         record.reason = REASON.CLOSED;
     } else if (specialLeave) {
+        record.outTime = "";
         record.status = STATUS.COMPLIANT;
         record.reason = REASON.SPECIAL;
-    } else if (!record.outTime) {
+    } else if (!record.inTime && record.outTime) {
         record.status = STATUS.NON_COMPLIANT;
-        record.reason = REASON.PENDING;
+        record.reason = REASON.MISSING_PUNCH_IN;
+    } else if (record.inTime && !record.outTime) {
+        const inMin = timeToMinutes(record.inTime);
+        const graceEnd = empType === "staff" ? STAFF_GRACE_END : FACULTY_GRACE_END;
+        const standardHours = empType === "staff" ? STAFF_STANDARD_HOURS : FACULTY_STANDARD_HOURS;
+        const targetOutMin = inMin <= graceEnd ? OFFICE_END_MIN : inMin + (standardHours * 60);
+        record.status = STATUS.NON_COMPLIANT;
+        record.reason = REASON.MISSING_PUNCH_OUT + " | Target: " + minutesToTime(targetOutMin);
+    } else if (!record.inTime && !record.outTime) {
+        record.status = STATUS.NON_COMPLIANT;
+        record.reason = REASON.MISSING_PUNCH_IN;
     }
 
     upsertRecord(record);

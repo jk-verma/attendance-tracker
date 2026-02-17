@@ -9,11 +9,13 @@ function renderTable() {
 
     const selectedMonth = document.getElementById("monthFilter").value;
 
+    const now = new Date();
+    const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+    const filterMonth = selectedMonth || currentMonth;
+
     let records = getAllRecords();
 
-    if (selectedMonth) {
-        records = records.filter(r => r.date.startsWith(selectedMonth));
-    }
+    records = records.filter(r => r.date.startsWith(filterMonth));
 
     tbody.innerHTML = "";
 
@@ -23,7 +25,7 @@ function renderTable() {
 
         if (record.reason === REASON.MISSING_PUNCH_IN) {
             tr.className = "status-pending";
-        } else if (record.reason === REASON.MISSING_PUNCH_OUT) {
+        } else if (record.reason && record.reason.startsWith(REASON.MISSING_PUNCH_OUT)) {
             tr.className = "status-pending";        
         } else if (record.reason === REASON.CLOSED || record.reason === REASON.SPECIAL) {
             tr.className = "status-neutral";

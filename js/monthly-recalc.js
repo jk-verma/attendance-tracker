@@ -44,7 +44,7 @@ function evaluateMonth(records) {
 
         const workingDays = calculateWorkingDays(month);
         const closedHolidays = monthRecords.filter(r => r.reason === REASON.CLOSED).length;
-        const type2Limit = Math.floor((workingDays - closedHolidays) * STAFF_LATE_TYPE2_PERCENT);
+        const type2Limit = Math.ceil((workingDays - closedHolidays) * STAFF_LATE_TYPE2_PERCENT);
 
         monthRecords.forEach(record => {
 
@@ -54,9 +54,27 @@ function evaluateMonth(records) {
                 return;
             }
 
-            if (!record.outTime) {
+            if (!record.inTime && !record.outTime) {
                 record.status = STATUS.NON_COMPLIANT;
-                record.reason = REASON.PENDING;
+                record.reason = REASON.MISSING_PUNCH_IN;
+                record.hours = 0;
+                return;
+            }
+
+            if (!record.inTime) {
+                record.status = STATUS.NON_COMPLIANT;
+                record.reason = REASON.MISSING_PUNCH_IN;
+                record.hours = 0;
+                return;
+            }
+
+            if (!record.outTime) {
+                const inMin = timeToMinutes(record.inTime);
+                const graceEnd = record.empType === "staff" ? STAFF_GRACE_END : FACULTY_GRACE_END;
+                const standardHours = record.empType === "staff" ? STAFF_STANDARD_HOURS : FACULTY_STANDARD_HOURS;
+                const targetOutMin = inMin <= graceEnd ? OFFICE_END_MIN : inMin + (standardHours * 60);
+                record.status = STATUS.NON_COMPLIANT;
+                record.reason = REASON.MISSING_PUNCH_OUT + " | Target: " + minutesToTime(targetOutMin);
                 record.hours = 0;
                 return;
             }
