@@ -61,7 +61,6 @@ function initializePickers(monthFilterEl, dateEl, inEl, outEl) {
         noCalendar: true,
         dateFormat: "h:i K",
         time_24hr: false,
-        defaultDate: "09:00 AM",
         allowInput: true,
         clickOpens: true,
         disableMobile: true
@@ -113,10 +112,6 @@ function bindCoreActions(ctx) {
         if (monthFilterEl.value) {
             renderSummary(monthFilterEl.value, empTypeEl.value);
         }
-    });
-
-    inEl.addEventListener("focus", function () {
-        if (!inEl.value && inEl._flatpickr) inEl._flatpickr.setDate("09:00 AM", false);
     });
 
     outEl.addEventListener("focus", function () {
