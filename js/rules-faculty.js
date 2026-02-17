@@ -50,7 +50,7 @@ function facultyBuildResult(hours, status, reason, usedRelaxation = false) {
     };
 }
 
-function facultyToMinutes(timeStr) {
+function timeToMinutes(timeStr) {
     if (!timeStr) return 0;
     const [h, mPart] = timeStr.split(":");
     const [m, period] = mPart.split(" ");
