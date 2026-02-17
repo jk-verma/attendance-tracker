@@ -308,8 +308,8 @@ function handleSaveRecord(payload) {
     const specialLeave = specialLeaveEl ? specialLeaveEl.value === "yes" : false;
 
     if (!payload.inTime && !closedHoliday && !specialLeave) {
-    alert("Punch-In Time is required.");
-    return;
+        alert("Punch-In Time is required.");
+        return;
     }
 
     if (closedHoliday) {
