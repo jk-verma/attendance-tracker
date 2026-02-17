@@ -134,18 +134,17 @@ function timeToMinutes(timeStr) {
 /**
  * Convert minutes to "hh:mm AM/PM"
  */
+function minutesToTime(minutes) {
+    if (minutes == null) return "";
 
-function timeToMinutes(timeStr) {
-    if (!timeStr) return 0;
-    const [h, mPart] = timeStr.split(":");
-    const [m, period] = mPart.split(" ");
-    let hour = parseInt(h, 10);
-    const minute = parseInt(m, 10);
+    let hrs = Math.floor(minutes / 60);
+    const mins = minutes % 60;
+    const period = hrs >= 12 ? "PM" : "AM";
 
-    if (period === "PM" && hour !== 12) hour += 12;
-    if (period === "AM" && hour === 12) hour = 0;
+    hrs = hrs % 12;
+    if (hrs === 0) hrs = 12;
 
-    return hour * 60 + minute;
+    return `${String(hrs).padStart(2, "0")}:${String(mins).padStart(2, "0")} ${period}`;
 }
 
 /**

@@ -54,18 +54,3 @@ function staffBuildResult(hours, status, reason, usedRelaxation = false, usedTyp
     };
 }
 
-<<<<<<< Updated upstream
-=======
-// function staffToMinutes(timeStr) {
-//     if (!timeStr) return 0;
-//     const [h, mPart] = timeStr.split(":");
-//     const [m, period] = mPart.split(" ");
-//     let hour = parseInt(h, 10);
-//     const minute = parseInt(m, 10);
-
-//     if (period === "PM" && hour !== 12) hour += 12;
-//     if (period === "AM" && hour === 12) hour = 0;
-
-//     return hour * 60 + minute;
-// }
->>>>>>> Stashed changes

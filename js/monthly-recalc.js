@@ -56,7 +56,7 @@ function evaluateMonth(records) {
 
             if (!record.outTime) {
                 record.status = STATUS.NON_COMPLIANT;
-                record.reason = REASON.PENDING;
+                record.reason = REASON.MISSING_PUNCH_OUT;
                 record.hours = 0;
                 return;
             }

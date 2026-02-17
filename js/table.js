@@ -21,13 +21,13 @@ function renderTable() {
 
         const tr = document.createElement("tr");
 
-         if (r._rowType === "missing") {
+         if (record._rowType === "missing") {
              tr.className = "status-missing";
          }
-         else if (r.status === STATUS.COMPLIANT) {
+         else if (record.status === STATUS.COMPLIANT) {
              tr.className = "status-compliant";
          }
-         else if (r.reason === REASON.CLOSED || r.reason === REASON.SPECIAL) {
+         else if (record.reason === REASON.CLOSED || record.reason === REASON.SPECIAL) {
              tr.className = "status-neutral";
          }
          else {
