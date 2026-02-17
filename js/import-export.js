@@ -97,7 +97,13 @@ async function importQRFromScanner(onComplete) {
 
     // Secondary path: html5-qrcode scanner widget
     if (typeof Html5QrcodeScanner !== "undefined") {
-        const scanner = new Html5QrcodeScanner("qrReader", { fps: 10, qrbox: 250 });
+        const scanner = new Html5QrcodeScanner("qrReader", {
+            fps: 10,
+            qrbox: function (viewfinderWidth, viewfinderHeight) {
+                var size = Math.min(viewfinderWidth, viewfinderHeight);
+                return { width: Math.floor(size * 0.7), height: Math.floor(size * 0.7) };
+            }
+        });
 
         scanner.render(function (decodedText) {
             const ok = processQrPayload(decodedText, "QR Imported & Recalculated");
@@ -116,7 +122,7 @@ async function importQRFromScanner(onComplete) {
 
     readerContainer.innerHTML = `
         <div style="margin-bottom:8px">Fallback webcam scanner active. Point camera at QR code.</div>
-        <video id="qrFallbackVideo" autoplay playsinline style="width:300px;border:1px solid #ccc"></video>
+        <video id="qrFallbackVideo" autoplay playsinline style="width:100%;max-width:300px;border:1px solid #ccc"></video>
         <button id="qrFallbackStop" style="margin-top:8px">Stop Scan</button>
     `;
 
@@ -174,7 +180,7 @@ async function startHtml5QrCameraScan(onComplete) {
     const readerContainer = document.getElementById("qrReader");
     readerContainer.innerHTML = `
         <div style="margin-bottom:8px">Webcam scanner active. Point camera at QR code.</div>
-        <div id="qrReaderCamera" style="width:300px"></div>
+        <div id="qrReaderCamera" style="width:100%"></div>
         <button id="qrCameraStop" style="margin-top:8px">Stop Scan</button>
     `;
 
@@ -193,7 +199,13 @@ async function startHtml5QrCameraScan(onComplete) {
 
         await html5QrCode.start(
             preferred.id,
-            { fps: 10, qrbox: 250 },
+            {
+                fps: 10,
+                qrbox: function (viewfinderWidth, viewfinderHeight) {
+                    var size = Math.min(viewfinderWidth, viewfinderHeight);
+                    return { width: Math.floor(size * 0.7), height: Math.floor(size * 0.7) };
+                }
+            },
             (decodedText) => {
                 const ok = processQrPayload(decodedText, "QR Imported & Recalculated");
                 html5QrCode.stop().then(() => html5QrCode.clear()).catch(() => {});
