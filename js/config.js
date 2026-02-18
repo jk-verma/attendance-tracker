@@ -158,7 +158,8 @@ function isWeekday(dateStr) {
 function normalizeEmpType(empType, empLabel = "") {
     const type = String(empType || "").toLowerCase();
     const label = String(empLabel || "").toLowerCase();
-    if (type === "staff" || type === "non-teaching" || label.includes("staff") || label.includes("non-teaching")) {
+    const normalizedLabel = label.replace(/-/g, "");
+    if (type === "staff" || type === "non-teaching" || type === "nonteaching" || label.includes("staff") || label.includes("non-teaching") || normalizedLabel.includes("nonteaching")) {
         return "staff";
     }
     return "faculty";
@@ -181,4 +182,11 @@ function getOfficialTourReason(officialTour, inTime, outTime) {
     }
 
     return "";
+}
+
+function calculateWorkedHours(inTime, outTime) {
+    const inMin = timeToMinutes(inTime);
+    const outMin = timeToMinutes(outTime);
+    if (!inTime || !outTime || inMin == null || outMin == null) return 0;
+    return Math.round(((outMin - inMin) / 60) * 100) / 100;
 }
