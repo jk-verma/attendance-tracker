@@ -26,6 +26,7 @@ Tired of messy spreadsheets and manual attendance tracking? Try the *Monthly Att
 • Works offline — all data stays in your browser
 
 📱 *How It Works*
+
 1️⃣ Open the tracker in any browser
 
 2️⃣ Select Employee Type → Pick Date → Enter Punch-In & Punch-Out
