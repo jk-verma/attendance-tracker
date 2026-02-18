@@ -131,7 +131,10 @@ function bindCoreActions(ctx) {
         closedHolidayEls.forEach(closedHolidayEl => closedHolidayEl.addEventListener("change", function () {
             if (getRadioGroupValue(closedHolidayEls) === "yes") {
                 setRadioGroupValue(specialLeaveEls, "no");
-                if (officialTourEl) officialTourEl.value = "none";
+                if (officialTourEl) {
+                    officialTourEl.value = "none";
+                    setDatePickerModeForOfficialTour(dateEl, "none");
+                }
                 clearPunchFields(inEl, outEl);
             } else {
                 restorePunchDefaults(inEl, outEl);
@@ -143,7 +146,10 @@ function bindCoreActions(ctx) {
         specialLeaveEls.forEach(specialLeaveEl => specialLeaveEl.addEventListener("change", function () {
             if (getRadioGroupValue(specialLeaveEls) === "yes") {
                 setRadioGroupValue(closedHolidayEls, "no");
-                if (officialTourEl) officialTourEl.value = "none";
+                if (officialTourEl) {
+                    officialTourEl.value = "none";
+                    setDatePickerModeForOfficialTour(dateEl, "none");
+                }
                 clearPunchFields(inEl, outEl);
             } else {
                 restorePunchDefaults(inEl, outEl);
@@ -153,6 +159,7 @@ function bindCoreActions(ctx) {
 
     if (officialTourEl) {
         officialTourEl.addEventListener("change", function () {
+            setDatePickerModeForOfficialTour(dateEl, officialTourEl.value);
             if (officialTourEl.value !== "none") {
                 setRadioGroupValue(closedHolidayEls, "no");
                 setRadioGroupValue(specialLeaveEls, "no");
@@ -326,59 +333,68 @@ function handleSaveRecord(payload) {
 
     const empType = normalizeEmpType(payload.empType);
     const officialTour = payload.officialTour || "none";
-    const record = {
-        date: payload.date,
-        empType,
-        empLabel: getEmpLabel(empType),
-        inTime: payload.inTime || "",
-        outTime: payload.outTime || "",
-        hours: 0,
-        status: "",
-        reason: "",
-        officialTour
-    };
+    const selectedDates = parseSelectedDates(payload.date, officialTour);
+
+    if (!selectedDates.length) {
+        alert("Please select a valid date.");
+        return;
+    }
 
     const closedHoliday = !!payload.closedHoliday;
     const specialLeave = !!payload.specialLeave;
 
-    if (closedHoliday) {
-        record.officialTour = "none";
-        record.inTime = "";
-        record.outTime = "";
-        record.status = STATUS.COMPLIANT;
-        record.reason = REASON.CLOSED;
-    } else if (specialLeave) {
-        record.officialTour = "none";
-        record.outTime = "";
-        record.status = STATUS.COMPLIANT;
-        record.reason = REASON.SPECIAL;
-    } else if (officialTour === "local") {
-        if (!record.inTime) {
-            record.status = STATUS.NON_COMPLIANT;
-            record.reason = REASON.MISSING_PUNCH_IN;
-        } else {
+    selectedDates.forEach(date => {
+        const record = {
+            date,
+            empType,
+            empLabel: getEmpLabel(empType),
+            inTime: payload.inTime || "",
+            outTime: payload.outTime || "",
+            hours: 0,
+            status: "",
+            reason: "",
+            officialTour
+        };
+
+        if (closedHoliday) {
+            record.officialTour = "none";
+            record.inTime = "";
+            record.outTime = "";
+            record.status = STATUS.COMPLIANT;
+            record.reason = REASON.CLOSED;
+        } else if (specialLeave) {
+            record.officialTour = "none";
+            record.outTime = "";
+            record.status = STATUS.COMPLIANT;
+            record.reason = REASON.SPECIAL;
+        } else if (officialTour === "local") {
+            if (!record.inTime) {
+                record.status = STATUS.NON_COMPLIANT;
+                record.reason = REASON.MISSING_PUNCH_IN;
+            } else {
+                record.status = STATUS.COMPLIANT;
+                record.reason = getOfficialTourReason(officialTour, record.inTime, record.outTime, record.date);
+            }
+        } else if (officialTour === "out") {
             record.status = STATUS.COMPLIANT;
             record.reason = getOfficialTourReason(officialTour, record.inTime, record.outTime, record.date);
+        } else if (!record.inTime && record.outTime) {
+            record.status = STATUS.NON_COMPLIANT;
+            record.reason = REASON.MISSING_PUNCH_IN;
+        } else if (record.inTime && !record.outTime) {
+            const inMin = timeToMinutes(record.inTime);
+            const graceEnd = empType === "staff" ? STAFF_GRACE_END : FACULTY_GRACE_END;
+            const standardHours = empType === "staff" ? STAFF_STANDARD_HOURS : FACULTY_STANDARD_HOURS;
+            const targetOutMin = inMin <= graceEnd ? OFFICE_END_MIN : inMin + (standardHours * 60);
+            record.status = STATUS.NON_COMPLIANT;
+            record.reason = REASON.MISSING_PUNCH_OUT + " | Target: " + minutesToTime(targetOutMin);
+        } else if (!record.inTime && !record.outTime) {
+            record.status = STATUS.NON_COMPLIANT;
+            record.reason = REASON.MISSING_PUNCH_IN;
         }
-    } else if (officialTour === "out") {
-        record.status = STATUS.COMPLIANT;
-        record.reason = getOfficialTourReason(officialTour, record.inTime, record.outTime, record.date);
-    } else if (!record.inTime && record.outTime) {
-        record.status = STATUS.NON_COMPLIANT;
-        record.reason = REASON.MISSING_PUNCH_IN;
-    } else if (record.inTime && !record.outTime) {
-        const inMin = timeToMinutes(record.inTime);
-        const graceEnd = empType === "staff" ? STAFF_GRACE_END : FACULTY_GRACE_END;
-        const standardHours = empType === "staff" ? STAFF_STANDARD_HOURS : FACULTY_STANDARD_HOURS;
-        const targetOutMin = inMin <= graceEnd ? OFFICE_END_MIN : inMin + (standardHours * 60);
-        record.status = STATUS.NON_COMPLIANT;
-        record.reason = REASON.MISSING_PUNCH_OUT + " | Target: " + minutesToTime(targetOutMin);
-    } else if (!record.inTime && !record.outTime) {
-        record.status = STATUS.NON_COMPLIANT;
-        record.reason = REASON.MISSING_PUNCH_IN;
-    }
 
-    upsertRecord(record);
+        upsertRecord(record);
+    });
 
     const reEvaluated = evaluateMonth(getAllRecords());
     saveAllRecords(reEvaluated);
@@ -404,4 +420,57 @@ function setRadioGroupValue(radioEls, value) {
     (radioEls || []).forEach(el => {
         el.checked = el.value === value;
     });
+}
+
+function setDatePickerModeForOfficialTour(dateEl, officialTourValue) {
+    if (!dateEl || !dateEl._flatpickr) return;
+
+    if (officialTourValue === "out") {
+        dateEl._flatpickr.set("mode", "range");
+        return;
+    }
+
+    const selectedDates = dateEl._flatpickr.selectedDates || [];
+    dateEl._flatpickr.set("mode", "single");
+    if (selectedDates.length > 0) {
+        dateEl._flatpickr.setDate(selectedDates[0], false);
+    }
+}
+
+function parseSelectedDates(dateValue, officialTour) {
+    const raw = String(dateValue || "").trim();
+    if (!raw) return [];
+
+    if (officialTour !== "out" || !raw.includes(" to ")) {
+        const singleDate = raw.split(" to ")[0].trim();
+        return isIsoDate(singleDate) ? [singleDate] : [];
+    }
+
+    const [startRaw, endRaw] = raw.split(" to ");
+    const start = startRaw.trim();
+    const end = (endRaw || "").trim();
+    if (!isIsoDate(start) || !isIsoDate(end)) return [];
+
+    const startDate = new Date(`${start}T00:00:00`);
+    const endDate = new Date(`${end}T00:00:00`);
+    if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime()) || endDate < startDate) return [];
+
+    const dates = [];
+    const cursor = new Date(startDate);
+    while (cursor <= endDate) {
+        dates.push(formatIsoDate(cursor));
+        cursor.setDate(cursor.getDate() + 1);
+    }
+    return dates;
+}
+
+function isIsoDate(value) {
+    return /^\d{4}-\d{2}-\d{2}$/.test(value);
+}
+
+function formatIsoDate(dateObj) {
+    const year = dateObj.getFullYear();
+    const month = String(dateObj.getMonth() + 1).padStart(2, "0");
+    const day = String(dateObj.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
 }
