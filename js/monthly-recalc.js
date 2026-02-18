@@ -64,7 +64,7 @@ function evaluateMonth(records) {
                     record.hours = 0;
                 } else {
                     record.status = STATUS.COMPLIANT;
-                    record.reason = getOfficialTourReason(record.officialTour, record.inTime, record.outTime);
+                    record.reason = getOfficialTourReason(record.officialTour, record.inTime, record.outTime, record.date);
                     record.hours = calculateWorkedHours(record.inTime, record.outTime);
                 }
                 return;
@@ -72,7 +72,7 @@ function evaluateMonth(records) {
 
             if (record.officialTour === "out") {
                 record.status = STATUS.COMPLIANT;
-                record.reason = getOfficialTourReason(record.officialTour, record.inTime, record.outTime);
+                record.reason = getOfficialTourReason(record.officialTour, record.inTime, record.outTime, record.date);
                 record.hours = calculateWorkedHours(record.inTime, record.outTime);
                 return;
             }
