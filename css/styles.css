@@ -97,8 +97,9 @@ h2 {
 
 .vertical-options {
     display: inline-flex;
-    flex-direction: column;
-    gap: 6px;
+    flex-direction: row;
+    gap: 16px;
+    flex-wrap: nowrap;
 }
 
 .vertical-options label {
