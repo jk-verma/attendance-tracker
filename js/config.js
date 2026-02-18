@@ -171,6 +171,9 @@ function getEmpLabel(empType) {
 
 function getOfficialTourReason(officialTour, inTime, outTime, dateStr = "") {
     if (officialTour === "local") {
+        const inMin = timeToMinutes(inTime);
+        const isLatePunchIn = inMin != null && inMin > OFFICE_START_MIN;
+        if (isLatePunchIn) return outTime ? `${REASON.OFFICIAL_TOUR_LOCAL} | Late Punch-In Allowed` : `${REASON.OFFICIAL_TOUR_LOCAL} | Late Punch-In Allowed | Punch-Out Exempted`;
         return outTime ? REASON.OFFICIAL_TOUR_LOCAL : REASON.OFFICIAL_TOUR_LOCAL + " | Punch-Out Exempted";
     }
 
