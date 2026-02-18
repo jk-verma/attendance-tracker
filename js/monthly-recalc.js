@@ -30,6 +30,9 @@ function evaluateMonth(records) {
     const grouped = {};
 
     records.forEach(r => {
+        r.empType = normalizeEmpType(r.empType, r.empLabel);
+        r.empLabel = getEmpLabel(r.empType);
+        r.officialTour = r.officialTour || "none";
         const month = r.date.slice(0, 7);
         if (!grouped[month]) grouped[month] = [];
         grouped[month].push(r);
@@ -51,6 +54,30 @@ function evaluateMonth(records) {
             if (record.reason === REASON.CLOSED || record.reason === REASON.SPECIAL) {
                 record.status = STATUS.COMPLIANT;
                 record.hours = 0;
+                return;
+            }
+
+            if (record.officialTour === "local") {
+                if (!record.inTime) {
+                    record.status = STATUS.NON_COMPLIANT;
+                    record.reason = REASON.MISSING_PUNCH_IN;
+                    record.hours = 0;
+                } else {
+                    const inMin = timeToMinutes(record.inTime);
+                    const outMin = timeToMinutes(record.outTime);
+                    record.status = STATUS.COMPLIANT;
+                    record.reason = getOfficialTourReason(record.officialTour, record.inTime, record.outTime);
+                    record.hours = (!record.outTime || outMin == null || inMin == null) ? 0 : Math.round(((outMin - inMin) / 60) * 100) / 100;
+                }
+                return;
+            }
+
+            if (record.officialTour === "out") {
+                const inMin = timeToMinutes(record.inTime);
+                const outMin = timeToMinutes(record.outTime);
+                record.status = STATUS.COMPLIANT;
+                record.reason = getOfficialTourReason(record.officialTour, record.inTime, record.outTime);
+                record.hours = (!record.inTime || !record.outTime || outMin == null || inMin == null) ? 0 : Math.round(((outMin - inMin) / 60) * 100) / 100;
                 return;
             }
 

@@ -19,7 +19,7 @@
     <h3>Overview</h3>
     <p>
         The <strong>Monthly Attendance Punch Tracker</strong> helps you record daily punch-in
-        and punch-out times for <em>Faculty</em> and <em>Staff</em> employees. It automatically
+        and punch-out times for <em>Teaching</em> and <em>Non-Teaching</em> employees. It automatically
         evaluates each entry against the applicable attendance rules and marks the record as
         <strong>Compliant</strong> or <strong>Non-Compliant</strong>.
     </p>
@@ -30,11 +30,12 @@
 <div class="guide-section">
     <h3>Recording a Punch</h3>
     <ol>
-        <li>Select the <strong>Employee Type</strong> (Faculty or Staff).</li>
+        <li>Select the <strong>Employee Type</strong> (Teaching or Non-Teaching) using radio buttons.</li>
         <li>Pick the <strong>Date</strong> using the date picker.</li>
         <li>Set the <strong>Punch-In</strong> and <strong>Punch-Out</strong> times.</li>
         <li>Choose the <strong>Required Daily Hours</strong> (default 8 h 30 m).</li>
         <li>If the day is a closed holiday or special leave, set the corresponding dropdown to <em>Yes</em>.</li>
+        <li>If applicable, set <strong>Official Tour</strong> to <em>Local Station</em> or <em>Out Station</em>.</li>
         <li>Click <strong>Save Punch</strong>. The record appears in the table below with its compliance status and reason.</li>
     </ol>
 </div>
@@ -50,9 +51,11 @@
             <tr><td>On-Time</td><td>Punched in at or before 09:00 AM and out at or after 05:30 PM.</td></tr>
             <tr><td>Grace</td><td>Arrived between 09:01 – 09:10 AM, left at or after 05:30 PM.</td></tr>
             <tr><td>Semimonthly Relaxation</td><td>Used one of the two allowed relaxation entries per month.</td></tr>
-            <tr><td>Late Compensation</td><td>Faculty: arrived 09:11 – 10:30 AM and completed 8.5 hours.</td></tr>
-            <tr><td>Late Compensation — Type I</td><td>Staff: arrived 09:11 – 09:30 AM and completed 8.5 hours.</td></tr>
-            <tr><td>Late Compensation — Type II</td><td>Staff: arrived 09:31 – 10:00 AM, completed 8.5 hours, within the 30% monthly cap.</td></tr>
+            <tr><td>Late Compensation</td><td>Teaching: arrived 09:11 – 10:30 AM and completed 8.5 hours.</td></tr>
+            <tr><td>Late Compensation — Type I</td><td>Non-Teaching: arrived 09:11 – 09:30 AM and completed 8.5 hours.</td></tr>
+            <tr><td>Late Compensation — Type II</td><td>Non-Teaching: arrived 09:31 – 10:00 AM, completed 8.5 hours, within the 30% monthly cap.</td></tr>
+            <tr><td>Official Tour — Local Station</td><td>Late Punch-In and Early Punch-Out are allowed. Punch-Out can be exempted in late-evening return cases.</td></tr>
+            <tr><td>Official Tour — Out Station</td><td>Punch-In can be exempted for early departure and Punch-Out can be exempted for late return (including return after several days).</td></tr>
             <tr><td>Non-Compliant / REJECT</td><td>Does not meet any compliant criteria.</td></tr>
             <tr><td>Closed Holiday</td><td>Day marked as a closed holiday.</td></tr>
             <tr><td>Special Leave</td><td>Day marked as special leave.</td></tr>
@@ -66,7 +69,7 @@
     <p>
         Use the <strong>Filter Month</strong> picker to view records for a specific month.
         When a month is selected, a summary panel appears showing counts of compliant,
-        non-compliant, grace, relaxation, and late-compensation entries.
+        non-compliant, grace, relaxation, late-compensation, and official-tour entries.
     </p>
 </div>
 
@@ -84,7 +87,7 @@
 <div class="guide-section">
     <h3>Import &amp; Export</h3>
     <ul>
-        <li><strong>Export as QR Code</strong> — Generate a QR code containing records for the filtered month or all records.</li>
+        <li><strong>Export as QR Code</strong> — Generate a QR code containing records for the filtered month or all records, and close the QR display using <em>Close QR</em>.</li>
         <li><strong>Export as CSV</strong> — Download a CSV file for the filtered month or all records.</li>
         <li><strong>Import via QR Scan</strong> — Use your camera to scan a previously exported QR code.</li>
         <li><strong>Import via QR Image</strong> — Upload a saved QR code image to import records.</li>
@@ -97,8 +100,8 @@
     <h3>Tips</h3>
     <ul>
         <li>Records are stored in your browser's local storage. Clearing browser data will erase all records — use export to back up.</li>
-        <li>Faculty and Staff follow different attendance rule sets; make sure the correct employee type is selected.</li>
-        <li>Semimonthly relaxation is limited to 2 entries per half-month for both Faculty and Staff.</li>
+        <li>Teaching and Non-Teaching follow different attendance rule sets; make sure the correct employee type is selected.</li>
+        <li>Semimonthly relaxation is limited to 2 entries per half-month for both Teaching and Non-Teaching.</li>
     </ul>
 </div>
 

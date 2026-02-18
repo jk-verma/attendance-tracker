@@ -31,7 +31,7 @@
         if (yearEl) yearEl.textContent = new Date().getFullYear();
 
         const monthFilterEl = document.getElementById("monthFilter");
-        const empTypeEl = document.getElementById("empType");
+        const empTypeEl = document.querySelector("input[name='empType']:checked");
 
         if (monthFilterEl && empTypeEl && monthFilterEl.value && typeof renderSummary === "function") {
             renderSummary(monthFilterEl.value, empTypeEl.value);

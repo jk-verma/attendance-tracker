@@ -1,6 +1,6 @@
 # Attendance Tracker
 
-Monthly Attendance Punch Tracker — a lightweight, browser-based tool for recording and evaluating daily punch-in / punch-out times for Faculty and Staff employees.
+Monthly Attendance Punch Tracker — a lightweight, browser-based tool for recording and evaluating daily punch-in / punch-out times for Teaching and Non-Teaching employees.
 
 ---
 
@@ -13,7 +13,7 @@ Tired of messy spreadsheets and manual attendance tracking? Try the *Monthly Att
 
 • Automatic compliance check (Compliant / Non-Compliant)
 
-• Separate rule engines for Faculty & Staff
+• Separate rule engines for Teaching & Non-Teaching
 
 • Grace period, Late Compensation & Semimonthly Relaxation — all handled automatically
 
@@ -23,13 +23,17 @@ Tired of messy spreadsheets and manual attendance tracking? Try the *Monthly Att
 
 • Import / Export records via QR Code or CSV
 
+• Official Tour support (Local Station / Out Station) with exemption-aware counting
+
+• Close generated QR code view when no longer needed
+
 • Works offline — all data stays in your browser
 
 📱 *How It Works*
 
 1️⃣ Open the tracker in any browser
 
-2️⃣ Select Employee Type → Pick Date → Enter Punch-In & Punch-Out
+2️⃣ Select Employee Type (Teaching/Non-Teaching) → Pick Date → Enter Punch-In & Punch-Out
 
 3️⃣ Click *Save Punch* — status is evaluated instantly
 
@@ -49,9 +53,10 @@ Tired of messy spreadsheets and manual attendance tracking? Try the *Monthly Att
 |---------|-------------|
 | Punch Tracking | Record daily punch-in and punch-out times |
 | Auto Evaluation | Each entry is evaluated against attendance rules automatically |
-| Faculty & Staff Rules | Separate compliance engines for different employee types |
+| Teaching & Non-Teaching Rules | Separate compliance engines for different employee types |
 | Grace Period | 09:01 – 09:10 AM arrivals handled with grace |
-| Late Compensation | Faculty: 09:11 – 10:30 AM; Staff Type I: 09:11 – 09:30 AM, Type II: 09:31 – 10:00 AM |
+| Late Compensation | Teaching: 09:11 – 10:30 AM; Non-Teaching Type I: 09:11 – 09:30 AM, Type II: 09:31 – 10:00 AM |
+| Official Tour | Local Station and Out Station records with punch exemptions and summary counts |
 | Semimonthly Relaxation | Up to 2 relaxation entries per half-month |
 | Monthly Summary | At-a-glance counts of compliant, non-compliant, grace, and leave entries |
 | Holiday & Leave | Mark days as Closed Holiday or Special Leave |

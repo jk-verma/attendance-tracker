@@ -34,10 +34,10 @@
 <!-- ================= UI SECTION ================= -->
 <div class="row">
 <label>Employee Type</label>
-<select id="empType">
-<option value="faculty">Faculty</option>
-<option value="staff">Staff</option>
-</select>
+<div class="emp-type-options">
+<label><input type="radio" name="empType" value="faculty" checked> Teaching</label>
+<label><input type="radio" name="empType" value="staff"> Non-Teaching</label>
+</div>
 </div>
 
 <div class="row">
@@ -82,6 +82,15 @@
 <select id="specialLeave">
 <option value="no">No</option>
 <option value="yes">Yes</option>
+</select>
+</div>
+
+<div class="row">
+<label>Official Tour</label>
+<select id="officialTour">
+<option value="none">No</option>
+<option value="local">Local Station</option>
+<option value="out">Out Station</option>
 </select>
 </div>
 
