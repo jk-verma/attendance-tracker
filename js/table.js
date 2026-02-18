@@ -37,7 +37,7 @@ function renderTable() {
 
         tr.innerHTML = `
             <td>${record.date || ""}</td>
-            <td>${record.empLabel || ""}</td>
+            <td>${getEmpLabel(record.empType || record.empLabel) || ""}</td>
             <td>${record.inTime || ""}</td>
             <td>${record.outTime || ""}</td>
             <td>${record.hours || ""}</td>
@@ -56,7 +56,13 @@ function loadRecordForEdit(date) {
     const record = getAllRecords().find(r => r.date === date);
     if (!record) return;
 
-    document.getElementById("empType").value = record.empType;
+    const normalizedType = normalizeEmpType(record.empType, record.empLabel);
+    document.querySelectorAll("input[name='empType']").forEach(el => {
+        el.checked = (el.value === normalizedType);
+    });
+
+    const officialTourEl = document.getElementById("officialTour");
+    if (officialTourEl) officialTourEl.value = record.officialTour || "none";
 
     const dateInput = document.getElementById("datePicker");
     const inInput = document.getElementById("punchIn");
@@ -80,7 +86,8 @@ function deleteRecord(date) {
     renderTable();
 
     const month = document.getElementById("monthFilter").value;
-    const empType = document.getElementById("empType").value;
+    const checkedEmpType = document.querySelector("input[name='empType']:checked");
+    const empType = checkedEmpType ? checkedEmpType.value : "faculty";
 
     if (month) renderSummary(month, empType);
 }

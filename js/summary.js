@@ -20,7 +20,9 @@ function generateMonthlySummary(month, empType) {
         lateCompTypeI: 0,
         lateCompTypeII: 0,
         closedHoliday: 0,
-        specialLeave: 0
+        specialLeave: 0,
+        officialTourLocal: 0,
+        officialTourOut: 0
     };
 
     records.forEach(r => {
@@ -37,6 +39,8 @@ function generateMonthlySummary(month, empType) {
         if (r.reason === REASON.LATE_COMP) summary.lateComp++;
         if (r.reason === REASON.LATE_COMP_TYPE1) summary.lateCompTypeI++;
         if (r.reason === REASON.LATE_COMP_TYPE2) summary.lateCompTypeII++;
+        if (r.reason && r.reason.startsWith(REASON.OFFICIAL_TOUR_LOCAL)) summary.officialTourLocal++;
+        if (r.reason && r.reason.startsWith(REASON.OFFICIAL_TOUR_OUT)) summary.officialTourOut++;
     });
 
     return summary;
@@ -67,6 +71,8 @@ function renderSummary(month, empType) {
             <div>Late Compensation: ${s.lateComp}</div>
             <div>Missing Punch-In: ${s.missingPunchIn}</div>
             <div>Missing Punch-Out: ${s.missingPunchOut}</div>
+            <div>Official Tour (Local Station): ${s.officialTourLocal}</div>
+            <div>Official Tour (Out Station): ${s.officialTourOut}</div>
             <div>Closed Holiday: ${s.closedHoliday}</div>
             <div>Special Leave: ${s.specialLeave}</div>
         </div>`;
@@ -87,6 +93,8 @@ function renderSummary(month, empType) {
             <div>Late Compensation Type II: ${s.lateCompTypeII}/${type2Limit}</div>
             <div>Missing Punch-In: ${s.missingPunchIn}</div>
             <div>Missing Punch-Out: ${s.missingPunchOut}</div>
+            <div>Official Tour (Local Station): ${s.officialTourLocal}</div>
+            <div>Official Tour (Out Station): ${s.officialTourOut}</div>
             <div>Closed Holiday: ${s.closedHoliday}</div>
             <div>Special Leave: ${s.specialLeave}</div>
         </div>`;

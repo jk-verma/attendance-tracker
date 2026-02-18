@@ -90,7 +90,9 @@ const REASON = {
     MISSING_PUNCH_IN: "Missing Punch-In",
     MISSING_PUNCH_OUT: "Missing Punch-Out",
     CLOSED: "Closed Holiday",
-    SPECIAL: "Special Leave"
+    SPECIAL: "Special Leave",
+    OFFICIAL_TOUR_LOCAL: "Official Tour—Local Station",
+    OFFICIAL_TOUR_OUT: "Official Tour—Out Station"
 };
 
 /* ============================================================
@@ -151,4 +153,32 @@ function isWeekday(dateStr) {
     const date = new Date(dateStr);
     const day = date.getDay();
     return day >= 1 && day <= 5;
+}
+
+function normalizeEmpType(empType, empLabel = "") {
+    const type = String(empType || "").toLowerCase();
+    const label = String(empLabel || "").toLowerCase();
+    if (type === "staff" || type === "non-teaching" || label.includes("staff") || label.includes("non-teaching")) {
+        return "staff";
+    }
+    return "faculty";
+}
+
+function getEmpLabel(empType) {
+    return normalizeEmpType(empType) === "staff" ? "Non-Teaching" : "Teaching";
+}
+
+function getOfficialTourReason(officialTour, inTime, outTime) {
+    if (officialTour === "local") {
+        return outTime ? REASON.OFFICIAL_TOUR_LOCAL : REASON.OFFICIAL_TOUR_LOCAL + " | Punch-Out Exempted";
+    }
+
+    if (officialTour === "out") {
+        if (!inTime && !outTime) return REASON.OFFICIAL_TOUR_OUT + " | Punch-In & Punch-Out Exempted";
+        if (!inTime) return REASON.OFFICIAL_TOUR_OUT + " | Punch-In Exempted";
+        if (!outTime) return REASON.OFFICIAL_TOUR_OUT + " | Punch-Out Exempted";
+        return REASON.OFFICIAL_TOUR_OUT;
+    }
+
+    return "";
 }

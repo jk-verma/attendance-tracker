@@ -9,21 +9,21 @@ function initializeUI() {
     if (uiInitialized) return;
     uiInitialized = true;
 
-    const empTypeEl = document.getElementById("empType");
+    const empTypeEls = Array.from(document.querySelectorAll("input[name='empType']"));
     const monthFilterEl = document.getElementById("monthFilter");
     const dateEl = document.getElementById("datePicker");
     const inEl = document.getElementById("punchIn");
     const outEl = document.getElementById("punchOut");
     const saveBtn = document.getElementById("saveBtn");
 
-    if (!empTypeEl || !monthFilterEl || !dateEl || !inEl || !outEl || !saveBtn) {
+    if (!empTypeEls.length || !monthFilterEl || !dateEl || !inEl || !outEl || !saveBtn) {
         console.error("UI elements missing. Initialization aborted.");
         return;
     }
 
     initializePickers(monthFilterEl, dateEl, inEl, outEl);
-    bindCoreActions({ empTypeEl, monthFilterEl, dateEl, inEl, outEl, saveBtn });
-    bindImportExportDeleteActions({ monthFilterEl, empTypeEl });
+    bindCoreActions({ empTypeEls, monthFilterEl, dateEl, inEl, outEl, saveBtn });
+    bindImportExportDeleteActions({ monthFilterEl, empTypeEls });
 
     closeSummary();
 }
@@ -81,21 +81,23 @@ function initializePickers(monthFilterEl, dateEl, inEl, outEl) {
 
 function bindCoreActions(ctx) {
 
-    const { empTypeEl, monthFilterEl, dateEl, inEl, outEl, saveBtn } = ctx;
+    const { empTypeEls, monthFilterEl, dateEl, inEl, outEl, saveBtn } = ctx;
     const closedHolidayEl = document.getElementById("closedHoliday");
     const specialLeaveEl = document.getElementById("specialLeave");
+    const officialTourEl = document.getElementById("officialTour");
 
     saveBtn.addEventListener("click", function () {
 
         const payload = {
-            empType: empTypeEl.value,
+            empType: getSelectedEmpType(empTypeEls),
             date: dateEl.value,
             inTime: inEl.value,
-            outTime: outEl.value
+            outTime: outEl.value,
+            officialTour: officialTourEl ? officialTourEl.value : "none"
         };
 
         handleSaveRecord(payload);
-        refreshAfterDataMutation(monthFilterEl, empTypeEl);
+        refreshAfterDataMutation(monthFilterEl, empTypeEls);
     });
 
     monthFilterEl.addEventListener("change", function () {
@@ -106,15 +108,17 @@ function bindCoreActions(ctx) {
             return;
         }
 
-        renderSummary(monthFilterEl.value, empTypeEl.value);
+        renderSummary(monthFilterEl.value, getSelectedEmpType(empTypeEls));
     });
 
-    empTypeEl.addEventListener("change", function () {
-        renderTable();
+    empTypeEls.forEach(empTypeEl => {
+        empTypeEl.addEventListener("change", function () {
+            renderTable();
 
-        if (monthFilterEl.value) {
-            renderSummary(monthFilterEl.value, empTypeEl.value);
-        }
+            if (monthFilterEl.value) {
+                renderSummary(monthFilterEl.value, getSelectedEmpType(empTypeEls));
+            }
+        });
     });
 
     outEl.addEventListener("focus", function () {
@@ -125,6 +129,7 @@ function bindCoreActions(ctx) {
         closedHolidayEl.addEventListener("change", function () {
             if (closedHolidayEl.value === "yes") {
                 if (specialLeaveEl) specialLeaveEl.value = "no";
+                if (officialTourEl) officialTourEl.value = "none";
                 clearPunchFields(inEl, outEl);
             } else {
                 restorePunchDefaults(inEl, outEl);
@@ -136,9 +141,19 @@ function bindCoreActions(ctx) {
         specialLeaveEl.addEventListener("change", function () {
             if (specialLeaveEl.value === "yes") {
                 if (closedHolidayEl) closedHolidayEl.value = "no";
+                if (officialTourEl) officialTourEl.value = "none";
                 clearPunchFields(inEl, outEl);
             } else {
                 restorePunchDefaults(inEl, outEl);
+            }
+        });
+    }
+
+    if (officialTourEl) {
+        officialTourEl.addEventListener("change", function () {
+            if (officialTourEl.value !== "none") {
+                if (closedHolidayEl) closedHolidayEl.value = "no";
+                if (specialLeaveEl) specialLeaveEl.value = "no";
             }
         });
     }
@@ -160,7 +175,7 @@ function restorePunchDefaults(inEl, outEl) {
 
 function bindImportExportDeleteActions(ctx) {
 
-    const { monthFilterEl, empTypeEl } = ctx;
+    const { monthFilterEl, empTypeEls } = ctx;
 
     const importBtn = document.getElementById("importBtn");
     const exportBtn = document.getElementById("exportBtn");
@@ -202,7 +217,7 @@ function bindImportExportDeleteActions(ctx) {
         }
 
         if (type === "qr-scan") {
-            importQRFromScanner(() => refreshAfterDataMutation(monthFilterEl, empTypeEl));
+            importQRFromScanner(() => refreshAfterDataMutation(monthFilterEl, empTypeEls));
         }
 
         if (type === "qr-upload") {
@@ -217,7 +232,7 @@ function bindImportExportDeleteActions(ctx) {
         if (!file) return;
 
         importCSV(file, () => {
-            refreshAfterDataMutation(monthFilterEl, empTypeEl);
+            refreshAfterDataMutation(monthFilterEl, empTypeEls);
         });
         importFile.value = "";
     });
@@ -227,7 +242,7 @@ function bindImportExportDeleteActions(ctx) {
         if (!file) return;
 
         importQRFromFile(file, () => {
-            refreshAfterDataMutation(monthFilterEl, empTypeEl);
+            refreshAfterDataMutation(monthFilterEl, empTypeEls);
         });
         qrImageFile.value = "";
     });
@@ -267,7 +282,7 @@ function bindImportExportDeleteActions(ctx) {
             }
         }
 
-        refreshAfterDataMutation(monthFilterEl, empTypeEl);
+        refreshAfterDataMutation(monthFilterEl, empTypeEls);
         closeAllMenus();
     });
 
@@ -278,11 +293,11 @@ function bindImportExportDeleteActions(ctx) {
     });
 }
 
-function refreshAfterDataMutation(monthFilterEl, empTypeEl) {
+function refreshAfterDataMutation(monthFilterEl, empTypeEls) {
     renderTable();
 
     if (monthFilterEl.value) {
-        renderSummary(monthFilterEl.value, empTypeEl.value);
+        renderSummary(monthFilterEl.value, getSelectedEmpType(empTypeEls));
     } else {
         closeSummary();
     }
@@ -307,30 +322,45 @@ function handleSaveRecord(payload) {
         return;
     }
 
-    const empType = payload.empType || "faculty";
+    const empType = normalizeEmpType(payload.empType);
+    const officialTour = payload.officialTour || "none";
     const record = {
         date: payload.date,
         empType,
-        empLabel: empType === "faculty" ? "Faculty" : "Staff",
+        empLabel: getEmpLabel(empType),
         inTime: payload.inTime || "",
         outTime: payload.outTime || "",
         hours: 0,
         status: "",
-        reason: ""
+        reason: "",
+        officialTour
     };
 
     const closedHoliday = document.getElementById("closedHoliday").value === "yes";
     const specialLeave = document.getElementById("specialLeave").value === "yes";
 
     if (closedHoliday) {
+        record.officialTour = "none";
         record.inTime = "";
         record.outTime = "";
         record.status = STATUS.COMPLIANT;
         record.reason = REASON.CLOSED;
     } else if (specialLeave) {
+        record.officialTour = "none";
         record.outTime = "";
         record.status = STATUS.COMPLIANT;
         record.reason = REASON.SPECIAL;
+    } else if (officialTour === "local") {
+        if (!record.inTime) {
+            record.status = STATUS.NON_COMPLIANT;
+            record.reason = REASON.MISSING_PUNCH_IN;
+        } else {
+            record.status = STATUS.COMPLIANT;
+            record.reason = getOfficialTourReason(officialTour, record.inTime, record.outTime);
+        }
+    } else if (officialTour === "out") {
+        record.status = STATUS.COMPLIANT;
+        record.reason = getOfficialTourReason(officialTour, record.inTime, record.outTime);
     } else if (!record.inTime && record.outTime) {
         record.status = STATUS.NON_COMPLIANT;
         record.reason = REASON.MISSING_PUNCH_IN;
@@ -350,4 +380,9 @@ function handleSaveRecord(payload) {
 
     const reEvaluated = evaluateMonth(getAllRecords());
     saveAllRecords(reEvaluated);
+}
+
+function getSelectedEmpType(empTypeEls) {
+    const selected = (empTypeEls || []).find(el => el.checked);
+    return normalizeEmpType(selected ? selected.value : "faculty");
 }

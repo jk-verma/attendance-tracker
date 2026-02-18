@@ -4,10 +4,10 @@
 
 function exportCSV(records, filename = "attendance_export.csv") {
 
-    let csv = "Date,Emp,In,Out,Hours,Status,Reason\n";
+    let csv = "Date,Emp,In,Out,Hours,Status,Reason,Official Tour\n";
 
     records.forEach(r => {
-        csv += `${r.date || ""},${r.empLabel || ""},${r.inTime || ""},${r.outTime || ""},${r.hours || ""},${r.status || ""},${r.reason || ""}\n`;
+        csv += `${r.date || ""},${getEmpLabel(r.empType || r.empLabel) || ""},${r.inTime || ""},${r.outTime || ""},${r.hours || ""},${r.status || ""},${r.reason || ""},${r.officialTour || "none"}\n`;
     });
 
     const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8" });
@@ -37,18 +37,20 @@ function importCSV(file, onComplete) {
             const parts = line.split(",");
             if (parts.length < 4) return;
 
-            const empLabel = parts[1].trim() || "Faculty";
-            const empType = empLabel.toLowerCase().includes("staff") ? "staff" : "faculty";
+            const empLabel = parts[1].trim() || "Teaching";
+            const empType = normalizeEmpType("", empLabel);
+            const officialTour = (parts[7] || "none").trim();
 
             records.push({
                 date: parts[0].trim(),
                 empType,
-                empLabel: empType === "faculty" ? "Faculty" : "Staff",
+                empLabel: getEmpLabel(empType),
                 inTime: parts[2].trim(),
                 outTime: parts[3].trim(),
                 hours: "",
                 status: "",
-                reason: ""
+                reason: "",
+                officialTour
             });
         });
 
@@ -84,6 +86,8 @@ function exportQR(records) {
         const entry = [r.date || "", r.empType || "faculty", r.inTime || "", r.outTime || ""];
         if (r.reason === REASON.CLOSED) entry.push("CH");
         else if (r.reason === REASON.SPECIAL) entry.push("SL");
+        else if (r.officialTour === "local") entry.push("OTL");
+        else if (r.officialTour === "out") entry.push("OTO");
         return entry;
     });
 
@@ -94,8 +98,19 @@ function exportQR(records) {
             container.innerHTML = "<div style='color:#c62828'>QR code generation failed. Too many records for a single QR code. Try exporting fewer records using Filter Month.</div>";
             return;
         }
+        const closeBtn = document.createElement("button");
+        closeBtn.type = "button";
+        closeBtn.textContent = "Close QR";
+        closeBtn.style.marginBottom = "10px";
+        closeBtn.addEventListener("click", closeQrDisplay);
+        container.appendChild(closeBtn);
         container.appendChild(canvas);
     });
+}
+
+function closeQrDisplay() {
+    const container = document.getElementById("qrContainer");
+    if (container) container.innerHTML = "";
 }
 
 async function importQRFromScanner(onComplete) {
@@ -326,13 +341,14 @@ function processQrPayload(decodedText, successMessage) {
             records = parsed.map(entry => {
                 const rec = {
                     date: entry[0] || "",
-                    empType: entry[1] || "faculty",
-                    empLabel: (entry[1] || "faculty") === "staff" ? "Staff" : "Faculty",
+                    empType: normalizeEmpType(entry[1]),
+                    empLabel: getEmpLabel(entry[1] || "faculty"),
                     inTime: entry[2] || "",
                     outTime: entry[3] || "",
                     hours: 0,
                     status: "",
-                    reason: ""
+                    reason: "",
+                    officialTour: "none"
                 };
                 if (entry[4] === "CH") {
                     rec.status = STATUS.COMPLIANT;
@@ -340,6 +356,10 @@ function processQrPayload(decodedText, successMessage) {
                 } else if (entry[4] === "SL") {
                     rec.status = STATUS.COMPLIANT;
                     rec.reason = REASON.SPECIAL;
+                } else if (entry[4] === "OTL") {
+                    rec.officialTour = "local";
+                } else if (entry[4] === "OTO") {
+                    rec.officialTour = "out";
                 }
                 return rec;
             });

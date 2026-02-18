@@ -74,11 +74,24 @@ h2 {
     align-items: center;
 }
 
+.emp-type-options {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+}
+
+.emp-type-options label {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-weight: 600;
+}
+
 /* ==============================
    Inputs & Selects
 ============================== */
 
-input,
+input:not([type="radio"]),
 select,
 button {
     height: 40px;
@@ -91,7 +104,7 @@ button {
 }
 
 /* Remove dark focus outlines */
-input:focus,
+input:not([type="radio"]):focus,
 select:focus {
     outline: none;
     border-color: #1976d2;
