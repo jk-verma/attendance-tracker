@@ -93,7 +93,9 @@ function bindCoreActions(ctx) {
             date: dateEl.value,
             inTime: inEl.value,
             outTime: outEl.value,
-            officialTour: officialTourEl ? officialTourEl.value : "none"
+            officialTour: officialTourEl ? officialTourEl.value : "none",
+            closedHoliday: getRadioGroupValue(closedHolidayEls) === "yes",
+            specialLeave: getRadioGroupValue(specialLeaveEls) === "yes"
         };
 
         handleSaveRecord(payload);
@@ -336,8 +338,8 @@ function handleSaveRecord(payload) {
         officialTour
     };
 
-    const closedHoliday = getRadioGroupValue(Array.from(document.querySelectorAll("input[name='closedHoliday']"))) === "yes";
-    const specialLeave = getRadioGroupValue(Array.from(document.querySelectorAll("input[name='specialLeave']"))) === "yes";
+    const closedHoliday = !!payload.closedHoliday;
+    const specialLeave = !!payload.specialLeave;
 
     if (closedHoliday) {
         record.officialTour = "none";
@@ -387,11 +389,17 @@ function getSelectedEmpType(empTypeEls) {
     return normalizeEmpType(selected ? selected.value : "faculty");
 }
 
+/**
+ * Returns the currently selected value in a radio group.
+ */
 function getRadioGroupValue(radioEls) {
     const selected = (radioEls || []).find(el => el.checked);
     return selected ? selected.value : "";
 }
 
+/**
+ * Marks exactly one radio value as checked within a radio group.
+ */
 function setRadioGroupValue(radioEls, value) {
     (radioEls || []).forEach(el => {
         el.checked = el.value === value;
