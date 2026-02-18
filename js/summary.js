@@ -72,7 +72,7 @@ function renderSummary(month, empType) {
             <div>Missing Punch-In: ${s.missingPunchIn}</div>
             <div>Missing Punch-Out: ${s.missingPunchOut}</div>
             <div>Official Tour (Local Station): ${s.officialTourLocal}</div>
-            <div>Official Tour (Out Station): ${s.officialTourOut}</div>
+            <div>Official Tour (Outstation): ${s.officialTourOut}</div>
             <div>Closed Holiday: ${s.closedHoliday}</div>
             <div>Special Leave: ${s.specialLeave}</div>
         </div>`;
@@ -94,7 +94,7 @@ function renderSummary(month, empType) {
             <div>Missing Punch-In: ${s.missingPunchIn}</div>
             <div>Missing Punch-Out: ${s.missingPunchOut}</div>
             <div>Official Tour (Local Station): ${s.officialTourLocal}</div>
-            <div>Official Tour (Out Station): ${s.officialTourOut}</div>
+            <div>Official Tour (Outstation): ${s.officialTourOut}</div>
             <div>Closed Holiday: ${s.closedHoliday}</div>
             <div>Special Leave: ${s.specialLeave}</div>
         </div>`;

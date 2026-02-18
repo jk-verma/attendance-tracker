@@ -23,7 +23,7 @@ Tired of messy spreadsheets and manual attendance tracking? Try the *Monthly Att
 
 • Import / Export records via QR Code or CSV
 
-• Official Tour support (Local Station / Out Station) with exemption-aware counting
+• Official Tour support (Local Station / Outstation) with exemption-aware counting
 
 • Close generated QR code view when no longer needed
 
@@ -56,7 +56,7 @@ Tired of messy spreadsheets and manual attendance tracking? Try the *Monthly Att
 | Teaching & Non-Teaching Rules | Separate compliance engines for different employee types |
 | Grace Period | 09:01 – 09:10 AM arrivals handled with grace |
 | Late Compensation | Teaching: 09:11 – 10:30 AM; Non-Teaching Type I: 09:11 – 09:30 AM, Type II: 09:31 – 10:00 AM |
-| Official Tour | Local Station and Out Station records with punch exemptions and summary counts |
+| Official Tour | Local Station and Outstation records with punch exemptions and summary counts |
 | Semimonthly Relaxation | Up to 2 relaxation entries per half-month |
 | Monthly Summary | At-a-glance counts of compliant, non-compliant, grace, and leave entries |
 | Holiday & Leave | Mark days as Closed Holiday or Special Leave |
