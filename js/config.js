@@ -92,7 +92,7 @@ const REASON = {
     CLOSED: "Closed Holiday",
     SPECIAL: "Special Leave",
     OFFICIAL_TOUR_LOCAL: "Official Tour—Local Station",
-    OFFICIAL_TOUR_OUT: "Official Tour—Out Station"
+    OFFICIAL_TOUR_OUT: "Official Tour—Outstation"
 };
 
 /* ============================================================
