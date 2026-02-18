@@ -95,6 +95,25 @@ h2 {
     margin: 0;
 }
 
+.vertical-options {
+    display: inline-flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.vertical-options label {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-weight: 600;
+}
+
+.vertical-options input[type="radio"] {
+    width: auto;
+    height: auto;
+    margin: 0;
+}
+
 /* ==============================
    Inputs & Selects
 ============================== */

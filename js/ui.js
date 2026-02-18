@@ -82,8 +82,8 @@ function initializePickers(monthFilterEl, dateEl, inEl, outEl) {
 function bindCoreActions(ctx) {
 
     const { empTypeEls, monthFilterEl, dateEl, inEl, outEl, saveBtn } = ctx;
-    const closedHolidayEl = document.getElementById("closedHoliday");
-    const specialLeaveEl = document.getElementById("specialLeave");
+    const closedHolidayEls = Array.from(document.querySelectorAll("input[name='closedHoliday']"));
+    const specialLeaveEls = Array.from(document.querySelectorAll("input[name='specialLeave']"));
     const officialTourEl = document.getElementById("officialTour");
 
     saveBtn.addEventListener("click", function () {
@@ -125,35 +125,35 @@ function bindCoreActions(ctx) {
         if (!outEl.value && outEl._flatpickr) outEl._flatpickr.setDate("05:30 PM", false);
     });
 
-    if (closedHolidayEl) {
-        closedHolidayEl.addEventListener("change", function () {
-            if (closedHolidayEl.value === "yes") {
-                if (specialLeaveEl) specialLeaveEl.value = "no";
+    if (closedHolidayEls.length) {
+        closedHolidayEls.forEach(closedHolidayEl => closedHolidayEl.addEventListener("change", function () {
+            if (getRadioGroupValue(closedHolidayEls) === "yes") {
+                setRadioGroupValue(specialLeaveEls, "no");
                 if (officialTourEl) officialTourEl.value = "none";
                 clearPunchFields(inEl, outEl);
             } else {
                 restorePunchDefaults(inEl, outEl);
             }
-        });
+        }));
     }
 
-    if (specialLeaveEl) {
-        specialLeaveEl.addEventListener("change", function () {
-            if (specialLeaveEl.value === "yes") {
-                if (closedHolidayEl) closedHolidayEl.value = "no";
+    if (specialLeaveEls.length) {
+        specialLeaveEls.forEach(specialLeaveEl => specialLeaveEl.addEventListener("change", function () {
+            if (getRadioGroupValue(specialLeaveEls) === "yes") {
+                setRadioGroupValue(closedHolidayEls, "no");
                 if (officialTourEl) officialTourEl.value = "none";
                 clearPunchFields(inEl, outEl);
             } else {
                 restorePunchDefaults(inEl, outEl);
             }
-        });
+        }));
     }
 
     if (officialTourEl) {
         officialTourEl.addEventListener("change", function () {
             if (officialTourEl.value !== "none") {
-                if (closedHolidayEl) closedHolidayEl.value = "no";
-                if (specialLeaveEl) specialLeaveEl.value = "no";
+                setRadioGroupValue(closedHolidayEls, "no");
+                setRadioGroupValue(specialLeaveEls, "no");
             }
         });
     }
@@ -336,8 +336,8 @@ function handleSaveRecord(payload) {
         officialTour
     };
 
-    const closedHoliday = document.getElementById("closedHoliday").value === "yes";
-    const specialLeave = document.getElementById("specialLeave").value === "yes";
+    const closedHoliday = getRadioGroupValue(Array.from(document.querySelectorAll("input[name='closedHoliday']"))) === "yes";
+    const specialLeave = getRadioGroupValue(Array.from(document.querySelectorAll("input[name='specialLeave']"))) === "yes";
 
     if (closedHoliday) {
         record.officialTour = "none";
@@ -385,4 +385,15 @@ function handleSaveRecord(payload) {
 function getSelectedEmpType(empTypeEls) {
     const selected = (empTypeEls || []).find(el => el.checked);
     return normalizeEmpType(selected ? selected.value : "faculty");
+}
+
+function getRadioGroupValue(radioEls) {
+    const selected = (radioEls || []).find(el => el.checked);
+    return selected ? selected.value : "";
+}
+
+function setRadioGroupValue(radioEls, value) {
+    (radioEls || []).forEach(el => {
+        el.checked = el.value === value;
+    });
 }
