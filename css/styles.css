@@ -114,6 +114,17 @@ h2 {
     margin: 0;
 }
 
+.paired-options {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+}
+
+.paired-option-title {
+    font-weight: 600;
+    margin-bottom: 4px;
+}
+
 /* ==============================
    Inputs & Selects
 ============================== */
@@ -283,6 +294,10 @@ th {
     }
 
     .action-row {
+        grid-template-columns: 1fr;
+    }
+
+    .paired-options {
         grid-template-columns: 1fr;
     }
 
