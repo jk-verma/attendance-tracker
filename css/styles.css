@@ -237,6 +237,14 @@ th {
     font-weight: 600;
 }
 
+#recordsTable th:nth-child(7),
+#recordsTable td:nth-child(7) {
+    width: 30%;
+    min-width: 280px;
+    white-space: normal;
+    word-break: break-word;
+}
+
 /* ==============================
    Row Status Colors
 ============================== */
