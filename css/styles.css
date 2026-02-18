@@ -237,6 +237,11 @@ th {
     font-weight: 600;
 }
 
+#recordsTable th,
+#recordsTable td {
+    white-space: nowrap;
+}
+
 #recordsTable th:nth-child(7),
 #recordsTable td:nth-child(7) {
     width: 30%;
