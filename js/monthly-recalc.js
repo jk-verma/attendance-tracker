@@ -63,21 +63,17 @@ function evaluateMonth(records) {
                     record.reason = REASON.MISSING_PUNCH_IN;
                     record.hours = 0;
                 } else {
-                    const inMin = timeToMinutes(record.inTime);
-                    const outMin = timeToMinutes(record.outTime);
                     record.status = STATUS.COMPLIANT;
                     record.reason = getOfficialTourReason(record.officialTour, record.inTime, record.outTime);
-                    record.hours = (!record.outTime || outMin == null || inMin == null) ? 0 : Math.round(((outMin - inMin) / 60) * 100) / 100;
+                    record.hours = calculateWorkedHours(record.inTime, record.outTime);
                 }
                 return;
             }
 
             if (record.officialTour === "out") {
-                const inMin = timeToMinutes(record.inTime);
-                const outMin = timeToMinutes(record.outTime);
                 record.status = STATUS.COMPLIANT;
                 record.reason = getOfficialTourReason(record.officialTour, record.inTime, record.outTime);
-                record.hours = (!record.inTime || !record.outTime || outMin == null || inMin == null) ? 0 : Math.round(((outMin - inMin) / 60) * 100) / 100;
+                record.hours = calculateWorkedHours(record.inTime, record.outTime);
                 return;
             }
 
