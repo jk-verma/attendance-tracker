@@ -169,15 +169,16 @@ function getEmpLabel(empType) {
     return normalizeEmpType(empType) === "staff" ? "Non-Teaching" : "Teaching";
 }
 
-function getOfficialTourReason(officialTour, inTime, outTime) {
+function getOfficialTourReason(officialTour, inTime, outTime, dateStr = "") {
     if (officialTour === "local") {
         return outTime ? REASON.OFFICIAL_TOUR_LOCAL : REASON.OFFICIAL_TOUR_LOCAL + " | Punch-Out Exempted";
     }
 
     if (officialTour === "out") {
-        if (!inTime && !outTime) return REASON.OFFICIAL_TOUR_OUT + " | Punch-In & Punch-Out Exempted";
-        if (!inTime) return REASON.OFFICIAL_TOUR_OUT + " | Punch-In Exempted";
-        if (!outTime) return REASON.OFFICIAL_TOUR_OUT + " | Punch-Out Exempted";
+        const unavailableOn = dateStr ? " | Unavailability Date: " + dateStr : "";
+        if (!inTime && !outTime) return REASON.OFFICIAL_TOUR_OUT + " | Punch-In & Punch-Out Exempted" + unavailableOn;
+        if (!inTime) return REASON.OFFICIAL_TOUR_OUT + " | Punch-In Exempted" + unavailableOn;
+        if (!outTime) return REASON.OFFICIAL_TOUR_OUT + " | Punch-Out Exempted" + unavailableOn;
         return REASON.OFFICIAL_TOUR_OUT;
     }
 

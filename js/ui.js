@@ -358,11 +358,11 @@ function handleSaveRecord(payload) {
             record.reason = REASON.MISSING_PUNCH_IN;
         } else {
             record.status = STATUS.COMPLIANT;
-            record.reason = getOfficialTourReason(officialTour, record.inTime, record.outTime);
+            record.reason = getOfficialTourReason(officialTour, record.inTime, record.outTime, record.date);
         }
     } else if (officialTour === "out") {
         record.status = STATUS.COMPLIANT;
-        record.reason = getOfficialTourReason(officialTour, record.inTime, record.outTime);
+        record.reason = getOfficialTourReason(officialTour, record.inTime, record.outTime, record.date);
     } else if (!record.inTime && record.outTime) {
         record.status = STATUS.NON_COMPLIANT;
         record.reason = REASON.MISSING_PUNCH_IN;
