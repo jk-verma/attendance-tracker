@@ -78,6 +78,7 @@ h2 {
     display: flex;
     align-items: center;
     gap: 18px;
+    flex-wrap: nowrap;
 }
 
 .emp-type-options label {
@@ -85,6 +86,13 @@ h2 {
     align-items: center;
     gap: 6px;
     font-weight: 600;
+    white-space: nowrap;
+}
+
+.emp-type-options input[type="radio"] {
+    width: auto;
+    height: auto;
+    margin: 0;
 }
 
 /* ==============================
