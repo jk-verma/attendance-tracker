@@ -4,6 +4,10 @@
 
 let uiInitialized = false;
 
+/**
+ * Entry point for UI setup. Runs once per page load.
+ * Guards against double-initialization via the uiInitialized flag.
+ */
 function initializeUI() {
 
     if (uiInitialized) return;
@@ -25,9 +29,16 @@ function initializeUI() {
     bindCoreActions({ empTypeEls, monthFilterEl, dateEl, inEl, outEl, saveBtn });
     bindImportExportDeleteActions({ monthFilterEl, empTypeEls });
 
+    // Ensure the summary panel is hidden on first load
     closeSummary();
 }
 
+/**
+ * Attaches flatpickr date/time pickers to all form inputs.
+ * The Tour End Date picker (#datePickerEnd) is NOT initialized here
+ * because its parent row is hidden; it is lazily initialized in
+ * setDatePickerModeForOfficialTour when Outstation is selected.
+ */
 function initializePickers(monthFilterEl, dateEl, inEl, outEl) {
 
     if (typeof flatpickr !== "function") {
@@ -46,16 +57,32 @@ function initializePickers(monthFilterEl, dateEl, inEl, outEl) {
         monthConfig.plugins = [new monthSelectPlugin({ shorthand: true, dateFormat: "Y-m", altFormat: "F Y" })];
     }
 
+    // Month filter: year-month format, optionally enhanced with monthSelectPlugin
     flatpickr(monthFilterEl, monthConfig);
 
+    // Tour Start Date: defaults to today; onChange keeps Tour End Date's minDate in sync
     flatpickr(dateEl, {
         dateFormat: "Y-m-d",
         defaultDate: new Date(),
         allowInput: true,
         clickOpens: true,
-        disableMobile: true
+        disableMobile: true,
+        onChange: function(selectedDates, dateStr) {
+            const dateEndEl = document.getElementById("datePickerEnd");
+            if (!dateEndEl || !dateEndEl._flatpickr) return;
+            // Prevent the end date from being before the new start date
+            dateEndEl._flatpickr.set("minDate", dateStr || null);
+            // Clear end date if it is now before the updated start date
+            if (selectedDates.length > 0) {
+                const endDates = dateEndEl._flatpickr.selectedDates;
+                if (endDates.length > 0 && endDates[0] < selectedDates[0]) {
+                    dateEndEl._flatpickr.clear();
+                }
+            }
+        }
     });
 
+    // Punch-In: time-only picker, 12-hour format, default 09:00 AM
     flatpickr(inEl, {
         enableTime: true,
         noCalendar: true,
@@ -67,6 +94,7 @@ function initializePickers(monthFilterEl, dateEl, inEl, outEl) {
         disableMobile: true
     });
 
+    // Punch-Out: time-only picker, 12-hour format, default 05:30 PM
     flatpickr(outEl, {
         enableTime: true,
         noCalendar: true,
@@ -79,6 +107,10 @@ function initializePickers(monthFilterEl, dateEl, inEl, outEl) {
     });
 }
 
+/**
+ * Wires up all form interactions: Save Punch, month/empType filter changes,
+ * Closed Holiday / Special Leave toggles, and Official Tour mode switching.
+ */
 function bindCoreActions(ctx) {
 
     const { empTypeEls, monthFilterEl, dateEl, inEl, outEl, saveBtn } = ctx;
@@ -88,12 +120,34 @@ function bindCoreActions(ctx) {
 
     saveBtn.addEventListener("click", function () {
 
+        const tourValue = officialTourEl ? officialTourEl.value : "none";
+        let dateValue = dateEl.value;
+
+        // For Outstation tours, validate both date fields and compose the "start to end" range string
+        if (tourValue === "out") {
+            const dateEndEl = document.getElementById("datePickerEnd");
+            const endDateValue = dateEndEl ? dateEndEl.value : "";
+            if (!dateValue) {
+                alert("Please select Tour Start Date.");
+                return;
+            }
+            if (!endDateValue) {
+                alert("Please select Tour End Date.");
+                return;
+            }
+            if (dateValue > endDateValue) {
+                alert("Tour End Date must be on or after Tour Start Date.");
+                return;
+            }
+            dateValue = `${dateValue} to ${endDateValue}`;
+        }
+
         const payload = {
             empType: getSelectedEmpType(empTypeEls),
-            date: dateEl.value,
+            date: dateValue,
             inTime: inEl.value,
             outTime: outEl.value,
-            officialTour: officialTourEl ? officialTourEl.value : "none",
+            officialTour: tourValue,
             closedHoliday: getRadioGroupValue(closedHolidayEls) === "yes",
             specialLeave: getRadioGroupValue(specialLeaveEls) === "yes"
         };
@@ -127,6 +181,7 @@ function bindCoreActions(ctx) {
         if (!outEl.value && outEl._flatpickr) outEl._flatpickr.setDate("05:30 PM", false);
     });
 
+    // Closed Holiday: selecting Yes resets Special Leave and Official Tour, clears punch fields
     if (closedHolidayEls.length) {
         closedHolidayEls.forEach(closedHolidayEl => closedHolidayEl.addEventListener("change", function () {
             if (getRadioGroupValue(closedHolidayEls) === "yes") {
@@ -142,6 +197,7 @@ function bindCoreActions(ctx) {
         }));
     }
 
+    // Special Leave: selecting Yes resets Closed Holiday and Official Tour, clears punch fields
     if (specialLeaveEls.length) {
         specialLeaveEls.forEach(specialLeaveEl => specialLeaveEl.addEventListener("change", function () {
             if (getRadioGroupValue(specialLeaveEls) === "yes") {
@@ -164,10 +220,23 @@ function bindCoreActions(ctx) {
                 setRadioGroupValue(closedHolidayEls, "no");
                 setRadioGroupValue(specialLeaveEls, "no");
             }
+            if (officialTourEl.value === "out") {
+                // Outstation: punch times are exempted, clear them
+                clearPunchFields(inEl, outEl);
+            } else {
+                // Non-outstation: clear the end date and restore default punch times
+                const dateEndEl = document.getElementById("datePickerEnd");
+                if (dateEndEl) {
+                    if (dateEndEl._flatpickr) dateEndEl._flatpickr.clear();
+                    else dateEndEl.value = "";
+                }
+                restorePunchDefaults(inEl, outEl);
+            }
         });
     }
 }
 
+/** Clears both punch-in and punch-out fields (used for Closed Holiday / Outstation). */
 function clearPunchFields(inEl, outEl) {
     if (inEl._flatpickr) inEl._flatpickr.clear();
     else inEl.value = "";
@@ -175,6 +244,7 @@ function clearPunchFields(inEl, outEl) {
     else outEl.value = "";
 }
 
+/** Resets punch-in to 09:00 AM and punch-out to 05:30 PM (standard office defaults). */
 function restorePunchDefaults(inEl, outEl) {
     if (inEl._flatpickr) inEl._flatpickr.setDate("09:00 AM", false);
     else inEl.value = "09:00 AM";
@@ -182,6 +252,9 @@ function restorePunchDefaults(inEl, outEl) {
     else outEl.value = "05:30 PM";
 }
 
+/**
+ * Wires up the Import / Export / Delete dropdown menus and their menu item actions.
+ */
 function bindImportExportDeleteActions(ctx) {
 
     const { monthFilterEl, empTypeEls } = ctx;
@@ -302,6 +375,10 @@ function bindImportExportDeleteActions(ctx) {
     });
 }
 
+/**
+ * Re-renders the table and, if a month is selected, refreshes the summary panel.
+ * Called after any storage mutation (save, import, delete).
+ */
 function refreshAfterDataMutation(monthFilterEl, empTypeEls) {
     renderTable();
 
@@ -312,18 +389,26 @@ function refreshAfterDataMutation(monthFilterEl, empTypeEls) {
     }
 }
 
+/** Toggles the visibility of a dropdown menu, closing all others first. */
 function toggleMenu(menuEl) {
     const isOpen = menuEl.style.display === "block";
     closeAllMenus();
     menuEl.style.display = isOpen ? "none" : "block";
 }
 
+/** Hides all open dropdown menus. */
 function closeAllMenus() {
     document.querySelectorAll(".dropdown-menu").forEach(menu => {
         menu.style.display = "none";
     });
 }
 
+/**
+ * Builds and persists attendance record(s) from the form payload.
+ * For Outstation tours, creates one record per day in the selected range;
+ * for all other types, creates a single record.
+ * After saving, re-evaluates the entire month to apply attendance rules.
+ */
 function handleSaveRecord(payload) {
 
     if (!payload || !payload.date) {
@@ -342,7 +427,10 @@ function handleSaveRecord(payload) {
 
     const closedHoliday = !!payload.closedHoliday;
     const specialLeave = !!payload.specialLeave;
+    // outTourId groups all days of the same outstation tour so the summary can count them as one event
+    const outTourId = officialTour === "out" ? selectedDates[0] : null;
 
+    // Build one record per selected date and determine its initial status/reason
     selectedDates.forEach(date => {
         const record = {
             date,
@@ -376,11 +464,14 @@ function handleSaveRecord(payload) {
                 record.reason = getOfficialTourReason(officialTour, record.inTime, record.outTime, record.date);
             }
         } else if (officialTour === "out") {
+            record.outTourId = outTourId;
             record.status = STATUS.COMPLIANT;
             record.reason = getOfficialTourReason(officialTour, record.inTime, record.outTime, record.date);
+        // Punch-Out present but Punch-In missing
         } else if (!record.inTime && record.outTime) {
             record.status = STATUS.NON_COMPLIANT;
             record.reason = REASON.MISSING_PUNCH_IN;
+        // Punch-In present but Punch-Out missing: calculate the expected punch-out time
         } else if (record.inTime && !record.outTime) {
             const inMin = timeToMinutes(record.inTime);
             const graceEnd = empType === "staff" ? STAFF_GRACE_END : FACULTY_GRACE_END;
@@ -388,6 +479,7 @@ function handleSaveRecord(payload) {
             const targetOutMin = inMin <= graceEnd ? OFFICE_END_MIN : inMin + (standardHours * 60);
             record.status = STATUS.NON_COMPLIANT;
             record.reason = REASON.MISSING_PUNCH_OUT + " | Target: " + minutesToTime(targetOutMin);
+        // Both punches missing
         } else if (!record.inTime && !record.outTime) {
             record.status = STATUS.NON_COMPLIANT;
             record.reason = REASON.MISSING_PUNCH_IN;
@@ -396,10 +488,12 @@ function handleSaveRecord(payload) {
         upsertRecord(record);
     });
 
+    // Re-evaluate the full dataset so relaxation/late-comp counters are recalculated correctly
     const reEvaluated = evaluateMonth(getAllRecords());
     saveAllRecords(reEvaluated);
 }
 
+/** Returns the normalized empType string for the currently checked radio button. */
 function getSelectedEmpType(empTypeEls) {
     const selected = (empTypeEls || []).find(el => el.checked);
     return normalizeEmpType(selected ? selected.value : "faculty");
@@ -422,21 +516,50 @@ function setRadioGroupValue(radioEls, value) {
     });
 }
 
+/**
+ * Shows or hides the Tour End Date row and relabels the start-date picker
+ * based on the selected Official Tour type.
+ * Also lazily initializes the Tour End Date flatpickr (with minDate = start date)
+ * the first time Outstation is selected, ensuring correct popup positioning.
+ */
 function setDatePickerModeForOfficialTour(dateEl, officialTourValue) {
-    if (!dateEl || !dateEl._flatpickr) return;
+    const outEndDateRow = document.getElementById("outEndDateRow");
+    const datePickerLabel = document.getElementById("datePickerLabel");
 
     if (officialTourValue === "out") {
-        dateEl._flatpickr.set("mode", "range");
+        if (outEndDateRow) outEndDateRow.style.display = "";
+        if (datePickerLabel) datePickerLabel.textContent = "Tour Start Date";
+
+        // Lazily initialize the end-date picker now that its row is visible,
+        // so flatpickr can correctly calculate the input's bounding rect.
+        const dateEndEl = document.getElementById("datePickerEnd");
+        if (dateEndEl && typeof flatpickr === "function") {
+            if (!dateEndEl._flatpickr) {
+                flatpickr(dateEndEl, {
+                    dateFormat: "Y-m-d",
+                    allowInput: true,
+                    clickOpens: true,
+                    disableMobile: true,
+                    minDate: dateEl.value || null
+                });
+            } else {
+                // Already initialized — just refresh the minDate constraint
+                dateEndEl._flatpickr.set("minDate", dateEl.value || null);
+            }
+        }
         return;
     }
 
-    const selectedDates = dateEl._flatpickr.selectedDates || [];
-    dateEl._flatpickr.set("mode", "single");
-    if (selectedDates.length > 0) {
-        dateEl._flatpickr.setDate(selectedDates[0], false);
-    }
+    if (outEndDateRow) outEndDateRow.style.display = "none";
+    if (datePickerLabel) datePickerLabel.textContent = "Date";
 }
 
+/**
+ * Converts a date string into an array of ISO date strings.
+ * For Outstation tours the value may be "YYYY-MM-DD to YYYY-MM-DD",
+ * which is expanded into every day in the inclusive range.
+ * Returns [] if the input is missing or invalid.
+ */
 function parseSelectedDates(dateValue, officialTour) {
     const raw = String(dateValue || "").trim();
     if (!raw) return [];
@@ -455,6 +578,7 @@ function parseSelectedDates(dateValue, officialTour) {
     const endDate = new Date(`${end}T00:00:00`);
     if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime()) || endDate < startDate) return [];
 
+    // Walk day-by-day from start to end (inclusive) and collect each date string
     const dates = [];
     const cursor = new Date(startDate);
     while (cursor <= endDate) {
@@ -464,10 +588,12 @@ function parseSelectedDates(dateValue, officialTour) {
     return dates;
 }
 
+/** Returns true if value matches the YYYY-MM-DD format. */
 function isIsoDate(value) {
     return /^\d{4}-\d{2}-\d{2}$/.test(value);
 }
 
+/** Formats a Date object as a YYYY-MM-DD string. */
 function formatIsoDate(dateObj) {
     const year = dateObj.getFullYear();
     const month = String(dateObj.getMonth() + 1).padStart(2, "0");
