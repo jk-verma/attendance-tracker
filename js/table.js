@@ -29,6 +29,8 @@ function renderTable() {
             tr.className = "status-pending";        
         } else if (record.reason === REASON.CLOSED || record.reason === REASON.SPECIAL) {
             tr.className = "status-neutral";
+        } else if (record.officialTour === "local" || record.officialTour === "out") {
+            tr.className = "status-official-tour";
         } else if (record.status === STATUS.COMPLIANT) {
             tr.className = "status-compliant";
         } else {
