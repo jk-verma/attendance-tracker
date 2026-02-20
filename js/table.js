@@ -70,8 +70,22 @@ function loadRecordForEdit(date) {
     const inInput = document.getElementById("punchIn");
     const outInput = document.getElementById("punchOut");
 
+    // Update the date picker UI mode (shows/hides Tour End Date row)
+    if (typeof setDatePickerModeForOfficialTour === "function") {
+        setDatePickerModeForOfficialTour(dateInput, record.officialTour || "none");
+    }
+
     if (dateInput._flatpickr) dateInput._flatpickr.setDate(record.date, false);
     else dateInput.value = record.date;
+
+    // For outstation records, also populate the end date picker with the same date
+    if (record.officialTour === "out") {
+        const dateEndEl = document.getElementById("datePickerEnd");
+        if (dateEndEl) {
+            if (dateEndEl._flatpickr) dateEndEl._flatpickr.setDate(record.date, false);
+            else dateEndEl.value = record.date;
+        }
+    }
 
     if (inInput._flatpickr) inInput._flatpickr.setDate(record.inTime || "", false);
     else inInput.value = record.inTime || "";

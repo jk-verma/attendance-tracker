@@ -94,13 +94,15 @@ function bindCoreActions(ctx) {
         if (tourValue === "out") {
             const dateEndEl = document.getElementById("datePickerEnd");
             const endDateValue = dateEndEl ? dateEndEl.value : "";
+            if (!dateValue) {
+                alert("Please select Tour Start Date.");
+                return;
+            }
             if (!endDateValue) {
                 alert("Please select Tour End Date.");
                 return;
             }
-            if (dateValue && endDateValue) {
-                dateValue = `${dateValue} to ${endDateValue}`;
-            }
+            dateValue = `${dateValue} to ${endDateValue}`;
         }
 
         const payload = {
@@ -456,7 +458,6 @@ function setDatePickerModeForOfficialTour(dateEl, officialTourValue) {
     if (officialTourValue === "out") {
         if (outEndDateRow) outEndDateRow.style.display = "";
         if (datePickerLabel) datePickerLabel.textContent = "Tour Start Date";
-        if (dateEl && dateEl._flatpickr) dateEl._flatpickr.set("mode", "single");
 
         // Lazily initialize the end-date picker now that its row is visible,
         // so flatpickr can correctly calculate the input's bounding rect.
@@ -474,14 +475,6 @@ function setDatePickerModeForOfficialTour(dateEl, officialTourValue) {
 
     if (outEndDateRow) outEndDateRow.style.display = "none";
     if (datePickerLabel) datePickerLabel.textContent = "Date";
-
-    if (dateEl && dateEl._flatpickr) {
-        const selectedDates = dateEl._flatpickr.selectedDates || [];
-        dateEl._flatpickr.set("mode", "single");
-        if (selectedDates.length > 0) {
-            dateEl._flatpickr.setDate(selectedDates[0], false);
-        }
-    }
 }
 
 function parseSelectedDates(dateValue, officialTour) {
