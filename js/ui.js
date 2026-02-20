@@ -56,6 +56,16 @@ function initializePickers(monthFilterEl, dateEl, inEl, outEl) {
         disableMobile: true
     });
 
+    const dateEndEl = document.getElementById("datePickerEnd");
+    if (dateEndEl) {
+        flatpickr(dateEndEl, {
+            dateFormat: "Y-m-d",
+            allowInput: true,
+            clickOpens: true,
+            disableMobile: true
+        });
+    }
+
     flatpickr(inEl, {
         enableTime: true,
         noCalendar: true,
@@ -88,12 +98,27 @@ function bindCoreActions(ctx) {
 
     saveBtn.addEventListener("click", function () {
 
+        const tourValue = officialTourEl ? officialTourEl.value : "none";
+        let dateValue = dateEl.value;
+
+        if (tourValue === "out") {
+            const dateEndEl = document.getElementById("datePickerEnd");
+            const endDateValue = dateEndEl ? dateEndEl.value : "";
+            if (!endDateValue) {
+                alert("Please select Tour End Date.");
+                return;
+            }
+            if (dateValue && endDateValue) {
+                dateValue = `${dateValue} to ${endDateValue}`;
+            }
+        }
+
         const payload = {
             empType: getSelectedEmpType(empTypeEls),
-            date: dateEl.value,
+            date: dateValue,
             inTime: inEl.value,
             outTime: outEl.value,
-            officialTour: officialTourEl ? officialTourEl.value : "none",
+            officialTour: tourValue,
             closedHoliday: getRadioGroupValue(closedHolidayEls) === "yes",
             specialLeave: getRadioGroupValue(specialLeaveEls) === "yes"
         };
@@ -167,6 +192,11 @@ function bindCoreActions(ctx) {
             if (officialTourEl.value === "out") {
                 clearPunchFields(inEl, outEl);
             } else {
+                const dateEndEl = document.getElementById("datePickerEnd");
+                if (dateEndEl) {
+                    if (dateEndEl._flatpickr) dateEndEl._flatpickr.clear();
+                    else dateEndEl.value = "";
+                }
                 restorePunchDefaults(inEl, outEl);
             }
         });
@@ -347,6 +377,7 @@ function handleSaveRecord(payload) {
 
     const closedHoliday = !!payload.closedHoliday;
     const specialLeave = !!payload.specialLeave;
+    const outTourId = officialTour === "out" ? selectedDates[0] : null;
 
     selectedDates.forEach(date => {
         const record = {
@@ -381,6 +412,7 @@ function handleSaveRecord(payload) {
                 record.reason = getOfficialTourReason(officialTour, record.inTime, record.outTime, record.date);
             }
         } else if (officialTour === "out") {
+            record.outTourId = outTourId;
             record.status = STATUS.COMPLIANT;
             record.reason = getOfficialTourReason(officialTour, record.inTime, record.outTime, record.date);
         } else if (!record.inTime && record.outTime) {
@@ -428,17 +460,25 @@ function setRadioGroupValue(radioEls, value) {
 }
 
 function setDatePickerModeForOfficialTour(dateEl, officialTourValue) {
-    if (!dateEl || !dateEl._flatpickr) return;
+    const outEndDateRow = document.getElementById("outEndDateRow");
+    const datePickerLabel = document.getElementById("datePickerLabel");
 
     if (officialTourValue === "out") {
-        dateEl._flatpickr.set("mode", "range");
+        if (outEndDateRow) outEndDateRow.style.display = "";
+        if (datePickerLabel) datePickerLabel.textContent = "Tour Start Date";
+        if (dateEl && dateEl._flatpickr) dateEl._flatpickr.set("mode", "single");
         return;
     }
 
-    const selectedDates = dateEl._flatpickr.selectedDates || [];
-    dateEl._flatpickr.set("mode", "single");
-    if (selectedDates.length > 0) {
-        dateEl._flatpickr.setDate(selectedDates[0], false);
+    if (outEndDateRow) outEndDateRow.style.display = "none";
+    if (datePickerLabel) datePickerLabel.textContent = "Date";
+
+    if (dateEl && dateEl._flatpickr) {
+        const selectedDates = dateEl._flatpickr.selectedDates || [];
+        dateEl._flatpickr.set("mode", "single");
+        if (selectedDates.length > 0) {
+            dateEl._flatpickr.setDate(selectedDates[0], false);
+        }
     }
 }
 
