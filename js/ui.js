@@ -53,7 +53,19 @@ function initializePickers(monthFilterEl, dateEl, inEl, outEl) {
         defaultDate: new Date(),
         allowInput: true,
         clickOpens: true,
-        disableMobile: true
+        disableMobile: true,
+        onChange: function(selectedDates, dateStr) {
+            const dateEndEl = document.getElementById("datePickerEnd");
+            if (!dateEndEl || !dateEndEl._flatpickr) return;
+            dateEndEl._flatpickr.set("minDate", dateStr || null);
+            // Clear end date if it is now before the updated start date
+            if (selectedDates.length > 0) {
+                const endDates = dateEndEl._flatpickr.selectedDates;
+                if (endDates.length > 0 && endDates[0] < selectedDates[0]) {
+                    dateEndEl._flatpickr.clear();
+                }
+            }
+        }
     });
 
     flatpickr(inEl, {
@@ -100,6 +112,10 @@ function bindCoreActions(ctx) {
             }
             if (!endDateValue) {
                 alert("Please select Tour End Date.");
+                return;
+            }
+            if (dateValue > endDateValue) {
+                alert("Tour End Date must be on or after Tour Start Date.");
                 return;
             }
             dateValue = `${dateValue} to ${endDateValue}`;
@@ -462,13 +478,18 @@ function setDatePickerModeForOfficialTour(dateEl, officialTourValue) {
         // Lazily initialize the end-date picker now that its row is visible,
         // so flatpickr can correctly calculate the input's bounding rect.
         const dateEndEl = document.getElementById("datePickerEnd");
-        if (dateEndEl && !dateEndEl._flatpickr && typeof flatpickr === "function") {
-            flatpickr(dateEndEl, {
-                dateFormat: "Y-m-d",
-                allowInput: true,
-                clickOpens: true,
-                disableMobile: true
-            });
+        if (dateEndEl && typeof flatpickr === "function") {
+            if (!dateEndEl._flatpickr) {
+                flatpickr(dateEndEl, {
+                    dateFormat: "Y-m-d",
+                    allowInput: true,
+                    clickOpens: true,
+                    disableMobile: true,
+                    minDate: dateEl.value || null
+                });
+            } else {
+                dateEndEl._flatpickr.set("minDate", dateEl.value || null);
+            }
         }
         return;
     }
