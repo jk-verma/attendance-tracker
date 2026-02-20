@@ -2,6 +2,11 @@
    SUMMARY MODULE
 ============================================================ */
 
+/**
+ * Aggregates attendance records for the given month and empType into a
+ * flat summary object used by renderSummary.
+ * Outstation tours are deduplicated by outTourId so multi-day tours count as one.
+ */
 function generateMonthlySummary(month, empType) {
 
     const records = getAllRecords()
@@ -25,6 +30,7 @@ function generateMonthlySummary(month, empType) {
         officialTourOut: 0
     };
 
+    // First pass: tally reason- and status-based counters for every record
     records.forEach(r => {
         if (r.reason === REASON.CLOSED) summary.closedHoliday++;
         if (r.reason === REASON.SPECIAL) summary.specialLeave++;
@@ -60,6 +66,10 @@ function generateMonthlySummary(month, empType) {
     return summary;
 }
 
+/**
+ * Renders the summary panel for the given month and employee type.
+ * Displays faculty or staff metrics depending on empType.
+ */
 function renderSummary(month, empType) {
 
     const panel = document.getElementById("summaryPanel");
@@ -93,6 +103,7 @@ function renderSummary(month, empType) {
     }
 
     if (empType === "staff") {
+        // Type II late arrivals are capped at 30% of effective working days (excluding closed holidays)
         const workingDays = calculateWorkingDays(month);
         const type2Limit = Math.ceil((workingDays - s.closedHoliday) * STAFF_LATE_TYPE2_PERCENT);
 
@@ -118,6 +129,7 @@ function renderSummary(month, empType) {
     panel.style.display = "block";
 }
 
+/** Hides and clears the summary panel. */
 function closeSummary() {
     const panel = document.getElementById("summaryPanel");
     if (!panel) return;
