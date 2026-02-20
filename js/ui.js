@@ -164,6 +164,11 @@ function bindCoreActions(ctx) {
                 setRadioGroupValue(closedHolidayEls, "no");
                 setRadioGroupValue(specialLeaveEls, "no");
             }
+            if (officialTourEl.value === "out") {
+                clearPunchFields(inEl, outEl);
+            } else {
+                restorePunchDefaults(inEl, outEl);
+            }
         });
     }
 }
