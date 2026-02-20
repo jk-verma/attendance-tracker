@@ -56,16 +56,6 @@ function initializePickers(monthFilterEl, dateEl, inEl, outEl) {
         disableMobile: true
     });
 
-    const dateEndEl = document.getElementById("datePickerEnd");
-    if (dateEndEl) {
-        flatpickr(dateEndEl, {
-            dateFormat: "Y-m-d",
-            allowInput: true,
-            clickOpens: true,
-            disableMobile: true
-        });
-    }
-
     flatpickr(inEl, {
         enableTime: true,
         noCalendar: true,
@@ -467,6 +457,18 @@ function setDatePickerModeForOfficialTour(dateEl, officialTourValue) {
         if (outEndDateRow) outEndDateRow.style.display = "";
         if (datePickerLabel) datePickerLabel.textContent = "Tour Start Date";
         if (dateEl && dateEl._flatpickr) dateEl._flatpickr.set("mode", "single");
+
+        // Lazily initialize the end-date picker now that its row is visible,
+        // so flatpickr can correctly calculate the input's bounding rect.
+        const dateEndEl = document.getElementById("datePickerEnd");
+        if (dateEndEl && !dateEndEl._flatpickr && typeof flatpickr === "function") {
+            flatpickr(dateEndEl, {
+                dateFormat: "Y-m-d",
+                allowInput: true,
+                clickOpens: true,
+                disableMobile: true
+            });
+        }
         return;
     }
 
