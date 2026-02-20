@@ -40,8 +40,22 @@ function generateMonthlySummary(month, empType) {
         if (r.reason === REASON.LATE_COMP_TYPE1) summary.lateCompTypeI++;
         if (r.reason === REASON.LATE_COMP_TYPE2) summary.lateCompTypeII++;
         if (r.reason && r.reason.startsWith(REASON.OFFICIAL_TOUR_LOCAL)) summary.officialTourLocal++;
-        if (r.reason && r.reason.startsWith(REASON.OFFICIAL_TOUR_OUT)) summary.officialTourOut++;
     });
+
+    // Count unique outstation tours (by outTourId); legacy records without outTourId count individually
+    const outTourIds = new Set();
+    let outTourLegacyCount = 0;
+    records.forEach(r => {
+        const isOutTour = r.officialTour === "out" || (r.reason && r.reason.startsWith(REASON.OFFICIAL_TOUR_OUT));
+        if (isOutTour) {
+            if (r.outTourId) {
+                outTourIds.add(r.outTourId);
+            } else {
+                outTourLegacyCount++;
+            }
+        }
+    });
+    summary.officialTourOut = outTourIds.size + outTourLegacyCount;
 
     return summary;
 }
