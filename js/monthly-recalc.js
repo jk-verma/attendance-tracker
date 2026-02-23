@@ -2,6 +2,10 @@
    MONTHLY RECALCULATION ENGINE
 ============================================================ */
 
+/**
+ * Dispatches a fully-punched record to the appropriate rule set
+ * (faculty or staff) and returns the evaluated result.
+ */
 function applyAttendanceRules(record, relaxationCount, type2Count, type2Limit) {
 
     if (record.empType === "faculty") {
@@ -21,12 +25,18 @@ function applyAttendanceRules(record, relaxationCount, type2Count, type2Limit) {
     };
 }
 
+/**
+ * Re-evaluates every record in the dataset by applying attendance rules.
+ * Records are grouped by (month × empType) so that per-month counters
+ * (relaxation, type2) are tracked independently for each employee type.
+ */
 function evaluateMonth(records) {
 
     if (!Array.isArray(records)) return [];
 
     records.sort((a, b) => a.date.localeCompare(b.date));
 
+    // Group records by YYYY-MM so each month is evaluated with its own running counters
     const grouped = {};
 
     records.forEach(r => {
@@ -42,6 +52,7 @@ function evaluateMonth(records) {
 
         const monthRecords = grouped[month];
 
+        // Per-month running counters; relaxation and type2 are capped by their respective limits
         let relaxationCount = 0;
         let type2Count = 0;
 
@@ -51,12 +62,14 @@ function evaluateMonth(records) {
 
         monthRecords.forEach(record => {
 
+            // Closed Holiday and Special Leave are always Compliant; skip rule evaluation
             if (record.reason === REASON.CLOSED || record.reason === REASON.SPECIAL) {
                 record.status = STATUS.COMPLIANT;
                 record.hours = 0;
                 return;
             }
 
+            // Local Station tour: Compliant if punched in, otherwise Non-Compliant
             if (record.officialTour === "local") {
                 if (!record.inTime) {
                     record.status = STATUS.NON_COMPLIANT;
@@ -70,6 +83,7 @@ function evaluateMonth(records) {
                 return;
             }
 
+            // Outstation tour: always Compliant; punch times are optional
             if (record.officialTour === "out") {
                 record.status = STATUS.COMPLIANT;
                 record.reason = getOfficialTourReason(record.officialTour, record.inTime, record.outTime, record.date);
@@ -121,6 +135,9 @@ function evaluateMonth(records) {
     return records;
 }
 
+/**
+ * Returns the number of Monday–Friday days in the given YYYY-MM month.
+ */
 function calculateWorkingDays(month) {
 
     const [year, m] = month.split("-").map(Number);
@@ -128,7 +145,7 @@ function calculateWorkingDays(month) {
     let count = 0;
 
     while (date.getMonth() === m - 1) {
-        const day = date.getDay();
+        const day = date.getDay(); // 0 = Sunday, 6 = Saturday
         if (day !== 0 && day !== 6) count++;
         date.setDate(date.getDate() + 1);
     }

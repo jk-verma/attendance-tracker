@@ -2,6 +2,10 @@
    IMPORT / EXPORT MODULE
 ============================================================ */
 
+/**
+ * Exports the given records array as a UTF-8 CSV file with a BOM prefix
+ * (\uFEFF) for correct Excel / Numbers opening on Windows.
+ */
 function exportCSV(records, filename = "attendance_export.csv") {
 
     let csv = "Date,Emp,In,Out,Hours,Status,Reason,Official Tour\n";
@@ -17,6 +21,11 @@ function exportCSV(records, filename = "attendance_export.csv") {
     link.click();
 }
 
+/**
+ * Reads a CSV file selected by the user, parses it into attendance records,
+ * re-evaluates the month, and saves to local storage.
+ * Expected column order: Date, Emp, In, Out, Hours, Status, Reason, Official Tour
+ */
 function importCSV(file, onComplete) {
 
     const reader = new FileReader();
@@ -37,6 +46,7 @@ function importCSV(file, onComplete) {
             const parts = line.split(",");
             if (parts.length < 4) return;
 
+            // Column indices: 0=Date, 1=Emp, 2=In, 3=Out, 4=Hours, 5=Status, 6=Reason, 7=Official Tour
             const empLabel = parts[1].trim() || "Teaching";
             const empType = normalizeEmpType("", empLabel);
             const officialTour = (parts[7] || "none").trim();
@@ -70,6 +80,13 @@ function importCSV(file, onComplete) {
     reader.readAsText(file);
 }
 
+/**
+ * Encodes attendance records into a compact array-of-arrays format and
+ * renders them as a single QR code canvas.
+ * Compact format per record: [date, empType, inTime, outTime, flagCode?]
+ * where flagCode is one of "CH" (Closed Holiday), "SL" (Special Leave),
+ * "OTL" (Official Tour Local), or "OTO" (Official Tour Outstation).
+ */
 function exportQR(records) {
 
     const container = document.getElementById("qrContainer");
@@ -93,11 +110,19 @@ function exportQR(records) {
 
     const payload = JSON.stringify(compact);
 
-    QRCode.toCanvas(payload, { width: 250, errorCorrectionLevel: "L" }, function (err, canvas) {
+    // Render at the physical pixel size so the canvas is sharp on high-DPI / retina screens.
+    // The CSS size is fixed at 300px; scaling by devicePixelRatio makes each QR module crisp.
+    const displayPx = 300;
+    const renderPx = Math.round(displayPx * window.devicePixelRatio);
+
+    QRCode.toCanvas(payload, { width: renderPx, errorCorrectionLevel: "M" }, function (err, canvas) {
         if (err) {
             container.innerHTML = "<div style='color:#c62828'>QR code generation failed. Too many records for a single QR code. Try exporting fewer records using Filter Month.</div>";
             return;
         }
+        // Constrain to the logical display size so layout is consistent across DPIs
+        canvas.style.width = displayPx + "px";
+        canvas.style.height = displayPx + "px";
         const closeBtn = document.createElement("button");
         closeBtn.type = "button";
         closeBtn.textContent = "Close QR";
@@ -108,11 +133,16 @@ function exportQR(records) {
     });
 }
 
+/** Clears the QR code canvas container. */
 function closeQrDisplay() {
     const container = document.getElementById("qrContainer");
     if (container) container.innerHTML = "";
 }
 
+/**
+ * Activates the device camera to scan a QR code and imports the embedded
+ * attendance records into local storage.
+ */
 async function importQRFromScanner(onComplete) {
 
     const readerContainer = document.getElementById("qrReader");
@@ -129,7 +159,7 @@ async function importQRFromScanner(onComplete) {
     // Secondary path: html5-qrcode scanner widget
     if (typeof Html5QrcodeScanner !== "undefined") {
         const scanner = new Html5QrcodeScanner("qrReader", {
-            fps: 5,
+            fps: 10,
             qrbox: function (viewfinderWidth, viewfinderHeight) {
                 const size = Math.min(viewfinderWidth, viewfinderHeight);
                 return { width: Math.floor(size * 0.7), height: Math.floor(size * 0.7) };
@@ -231,10 +261,16 @@ async function startHtml5QrCameraScan(onComplete) {
         await html5QrCode.start(
             preferred.id,
             {
-                fps: 5,
+                fps: 10,
                 qrbox: function (viewfinderWidth, viewfinderHeight) {
                     const size = Math.min(viewfinderWidth, viewfinderHeight);
                     return { width: Math.floor(size * 0.7), height: Math.floor(size * 0.7) };
+                },
+                // Request HD resolution for a sharper live feed; camera is already
+                // selected by preferred.id so no facingMode constraint is needed here
+                videoConstraints: {
+                    width: { ideal: 1280 },
+                    height: { ideal: 720 }
                 }
             },
             (decodedText) => {
@@ -264,6 +300,10 @@ async function startHtml5QrCameraScan(onComplete) {
     }
 }
 
+/**
+ * Decodes a QR code from an uploaded image file and imports the embedded
+ * attendance records into local storage.
+ */
 function importQRFromFile(file, onComplete) {
 
     if (!file) {
