@@ -110,11 +110,19 @@ function exportQR(records) {
 
     const payload = JSON.stringify(compact);
 
-    QRCode.toCanvas(payload, { width: 250, errorCorrectionLevel: "L" }, function (err, canvas) {
+    // Render at the physical pixel size so the canvas is sharp on high-DPI / retina screens.
+    // The CSS size is fixed at 300px; scaling by devicePixelRatio makes each QR module crisp.
+    const displayPx = 300;
+    const renderPx = Math.round(displayPx * window.devicePixelRatio);
+
+    QRCode.toCanvas(payload, { width: renderPx, errorCorrectionLevel: "M" }, function (err, canvas) {
         if (err) {
             container.innerHTML = "<div style='color:#c62828'>QR code generation failed. Too many records for a single QR code. Try exporting fewer records using Filter Month.</div>";
             return;
         }
+        // Constrain to the logical display size so layout is consistent across DPIs
+        canvas.style.width = displayPx + "px";
+        canvas.style.height = displayPx + "px";
         const closeBtn = document.createElement("button");
         closeBtn.type = "button";
         closeBtn.textContent = "Close QR";
@@ -151,7 +159,7 @@ async function importQRFromScanner(onComplete) {
     // Secondary path: html5-qrcode scanner widget
     if (typeof Html5QrcodeScanner !== "undefined") {
         const scanner = new Html5QrcodeScanner("qrReader", {
-            fps: 5,
+            fps: 10,
             qrbox: function (viewfinderWidth, viewfinderHeight) {
                 const size = Math.min(viewfinderWidth, viewfinderHeight);
                 return { width: Math.floor(size * 0.7), height: Math.floor(size * 0.7) };
@@ -253,10 +261,16 @@ async function startHtml5QrCameraScan(onComplete) {
         await html5QrCode.start(
             preferred.id,
             {
-                fps: 5,
+                fps: 10,
                 qrbox: function (viewfinderWidth, viewfinderHeight) {
                     const size = Math.min(viewfinderWidth, viewfinderHeight);
                     return { width: Math.floor(size * 0.7), height: Math.floor(size * 0.7) };
+                },
+                // Request HD resolution for a sharper live feed; camera is already
+                // selected by preferred.id so no facingMode constraint is needed here
+                videoConstraints: {
+                    width: { ideal: 1280 },
+                    height: { ideal: 720 }
                 }
             },
             (decodedText) => {
