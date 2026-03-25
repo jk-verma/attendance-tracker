@@ -20,7 +20,8 @@ const FACULTY_CONFIG = {
  *  1. On-Time      — in ≤ 09:00, out ≥ 17:30
  *  2. Grace        — in 09:01–09:10, out ≥ 17:30
  *  3. Late-Comp    — in 09:11–10:30, worked ≥ 8.5 h
- *  4. Relaxation   — quota available, late-in or early-out with ≥ 7.5 h worked
+ *  4. Relaxation   — quota available, (late-in with full-day out) OR
+ *                    (in ≤ 09:10 i.e. on-time or grace, early-out ≥ 16:30), worked ≥ 7.5 h
  *  5. Non-Compliant
  */
 function applyFacultyRules(record, relaxationCount) {
@@ -44,9 +45,13 @@ function applyFacultyRules(record, relaxationCount) {
         return facultyBuildResult(workedHours, STATUS.COMPLIANT, REASON.LATE_COMP);
     }
 
-    // Semimonthly relaxation: up to 2 times per month, requires ≥ 7.5 h worked
+    // Semimonthly relaxation: up to 2 times per month, requires ≥ 7.5 h worked.
+    // lateRelax: arrived late (up to 10:00) but stayed the full day.
+    // earlyRelax: arrived on-time or within grace window (≤ 09:10) but left slightly early (≥ 16:30).
+    //   Grace arrivals (09:01–09:10) with early departure reach here because Grace (rule 2)
+    //   requires out ≥ 17:30; they can consume a relaxation slot instead of being rejected.
     const lateRelax = inMin <= FACULTY_CONFIG.RELAX_LIMIT && outMin >= FACULTY_CONFIG.OFFICE_END;
-    const earlyRelax = inMin <= FACULTY_CONFIG.OFFICE_START && outMin >= (FACULTY_CONFIG.OFFICE_END - 60);
+    const earlyRelax = inMin <= FACULTY_CONFIG.GRACE_END && outMin >= (FACULTY_CONFIG.OFFICE_END - 60);
 
     if (relaxationCount < FACULTY_RELAXATION_LIMIT && (lateRelax || earlyRelax) && workedHours >= FACULTY_CONFIG.MIN_RELAX_HOURS) {
         return facultyBuildResult(workedHours, STATUS.COMPLIANT, REASON.SEMI_RELAX, true);
