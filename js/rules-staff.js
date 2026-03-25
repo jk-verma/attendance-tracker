@@ -21,7 +21,8 @@ const STAFF_CONFIG = {
  *  2. Grace        — in 09:01–09:10, out ≥ 17:30
  *  3. Late-Comp Type I  — in 09:11–09:30, worked ≥ 8.5 h
  *  4. Late-Comp Type II — in 09:31–10:00, worked ≥ 8.5 h, within monthly 30% cap
- *  5. Relaxation   — quota available, late-in or early-out with ≥ 7.5 h worked
+ *  5. Relaxation   — quota available, (late-in with full-day out) OR
+ *                    (in ≤ 09:10 i.e. on-time or grace, early-out ≥ 16:30), worked ≥ 7.5 h
  *  6. Non-Compliant
  */
 function applyStaffRules(record, relaxationCount, type2Count, type2Limit) {
@@ -50,9 +51,13 @@ function applyStaffRules(record, relaxationCount, type2Count, type2Limit) {
         return staffBuildResult(workedHours, STATUS.COMPLIANT, REASON.LATE_COMP_TYPE2, false, true);
     }
 
-    // Semimonthly relaxation: up to 2 times per month, requires ≥ 7.5 h worked
+    // Semimonthly relaxation: up to 2 times per month, requires ≥ 7.5 h worked.
+    // lateRelax: arrived late (up to 10:00) but stayed the full day.
+    // earlyRelax: arrived on-time or within grace window (≤ 09:10) but left slightly early (≥ 16:30).
+    //   Grace arrivals (09:01–09:10) with early departure reach here because Grace (rule 2)
+    //   requires out ≥ 17:30; they can consume a relaxation slot instead of being rejected.
     const lateRelax = inMin <= STAFF_CONFIG.TYPE2_END && outMin >= STAFF_CONFIG.OFFICE_END;
-    const earlyRelax = inMin <= STAFF_CONFIG.OFFICE_START && outMin >= (STAFF_CONFIG.OFFICE_END - 60);
+    const earlyRelax = inMin <= STAFF_CONFIG.GRACE_END && outMin >= (STAFF_CONFIG.OFFICE_END - 60);
 
     if (relaxationCount < STAFF_RELAXATION_LIMIT && (lateRelax || earlyRelax) && workedHours >= STAFF_CONFIG.MIN_RELAX_HOURS) {
         return staffBuildResult(workedHours, STATUS.COMPLIANT, REASON.SEMI_RELAX, true);
